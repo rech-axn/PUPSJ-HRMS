@@ -4,6 +4,16 @@
    ========================================================================== */
 'use strict';
 
+  // Ensure In-Browser Test Runner (Tests.run) is available on all pages
+  if (typeof Tests === 'undefined' && typeof document !== 'undefined') {
+    const isRoot = !window.location.pathname.includes('/pages/');
+    const isNested = window.location.pathname.includes('/management/') || window.location.pathname.includes('/guest/') || window.location.pathname.includes('/rooms/') || window.location.pathname.includes('/main/') || window.location.pathname.includes('/auth/');
+    const testsScript = document.createElement('script');
+    testsScript.src = isRoot ? 'js/tests.js' : (isNested ? '../../js/tests.js' : '../js/tests.js');
+    document.head.appendChild(testsScript);
+  }
+
+
 (function () {
   // Determine relative root path from current page location
   const isPagesDir = location.pathname.includes('/pages/');

@@ -6,7 +6,8 @@
 'use strict';
 
 (function () {
-  let stationFilter = 'all'; // 'all' | 'Kitchen' | 'Bar'
+  let stationFilter = 'all';
+  let menuMap = {}; // 'all' | 'Kitchen' | 'Bar'
   let timerInterval = null;
 
   function init() {
@@ -20,7 +21,7 @@
   function getActiveKitchenOrders() {
     const orders = Data.getOrders();
     const menu = Data.getMenu();
-    const menuMap = {};
+    menuMap = {};
     menu.forEach(m => { menuMap[m.id] = m.station || 'Kitchen'; });
 
     return orders.filter(o => {

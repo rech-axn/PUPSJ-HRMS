@@ -33,6 +33,7 @@
     const arrToday = res.filter(r => r.i === T && (r.st === 'Confirmed' || r.st === 'Pending'));
     const depToday = res.filter(r => r.o === T && r.st === 'Checked-in');
     const inHouse = res.filter(r => r.st === 'Checked-in');
+    const inHouseGuestCount = inHouse.reduce((sum, r) => sum + (Number(r.guests) || 1), 0);
 
     const totalRooms = rooms.length;
 

@@ -38,7 +38,7 @@
   }
 
   function getTasksForStaff(staffId, staffName) {
-    const hkTasks = Data.getHousekeepingRooms().filter(r => r.a === Number(staffId) || r.assignedName === staffName);
+    const hkTasks = (Data.getHk ? Data.getHk() : []).filter(r => r.a === Number(staffId) || r.assignedName === staffName);
     const mxTasks = Data.getMaintenance().filter(m => m.assignedTo === staffName && (m.status || m.st) !== 'Resolved');
     return {
       hk: hkTasks,

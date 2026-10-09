@@ -8,8 +8,6 @@
 (function () {
   let statusFilter = '';
   let typeFilter = '';
-      floorFilter = '';
-      const flSel = $('roomFloorFilter'); if (flSel) flSel.value = '';
   let floorFilter = '';
   let searchQuery = '';
   let page = 1;
@@ -179,7 +177,6 @@
     $('roomSearchInput').oninput = (e) => { searchQuery = e.target.value.toLowerCase().trim(); page = 1; renderTable(); };
     $('roomStatusFilter').onchange = (e) => { statusFilter = e.target.value; page = 1; renderTable(); };
     $('roomTypeFilter').onchange = (e) => { typeFilter = e.target.value; page = 1; renderTable(); };
-    const flSel = $('roomFloorFilter'); if (flSel) flSel.onchange = (e) => { floorFilter = e.target.value; page = 1; renderTable(); };
 
     $('btnResetRoomFilters').onclick = () => {
       searchQuery = '';

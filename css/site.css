@@ -1647,6 +1647,79 @@ tbody tr:hover {
   }
 }
 
+/* ─── Ultra-Mobile & Touch Accessibility (360px - 480px) ─── */
+@media (max-width: 480px) {
+  :root {
+    --s4: 12px;
+    --s5: 16px;
+  }
+  body {
+    font-size: 13px;
+  }
+  .modal {
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+    border-radius: var(--r) !important;
+  }
+  .modal-header {
+    padding: 12px 14px;
+  }
+  .modal-body {
+    padding: 12px 14px;
+  }
+  .modal-footer {
+    padding: 10px 14px;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .modal-footer button, .modal-footer .btn, .modal-footer .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+  .btn, .btn-secondary, .btn-ghost, .btn-danger {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+  .btn-sm {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+  input[type="text"], input[type="email"], input[type="password"], input[type="tel"], input[type="number"], input[type="date"], input[type="time"], select, textarea {
+    min-height: 44px;
+    font-size: 16px; /* Prevents unwanted iOS/Android viewport zoom */
+  }
+  .staff-topbar {
+    gap: 6px;
+    padding: 0 8px;
+  }
+  .staff-topbar-title {
+    font-size: 14px;
+  }
+  .table th, .table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .tabs {
+    gap: 4px;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .tab-btn {
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+  .card {
+    padding: 14px;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
 /* ─── Motion Accessibility ─── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

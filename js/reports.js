@@ -120,15 +120,28 @@
     });
 
     // Restaurant Direct Paid Revenue (exclude room charges to prevent double counting with folio)
-    let diningRevenue = 0;
+    // Direct POS Paid Dining
+    let diningDirectRevenue = 0;
     filteredOrders.forEach(o => {
       const isDirectPaid = (o.payStatus === 'Paid' || o.status === 'Paid') && (!o.linkedRes && !o.resCode && (!o.target || !o.target.includes('Room')));
       if (isDirectPaid) {
         const orderTotal = Number(o.subtotal) || (o.lines || []).reduce((sum, l) => sum + (l.qty * (l.unitPrice || l.price || 0)), 0);
-        diningRevenue += orderTotal;
+        diningDirectRevenue += orderTotal;
       }
     });
 
+    // In-room dining charges posted to guest folios (Defect 5.1.7 fix)
+    let diningRoomRevenue = 0;
+    validBookings.forEach(r => {
+      (r.x || []).forEach(x => {
+        const xDate = x.d || r.ci || r.i;
+        if (fromDate && xDate < fromDate) return;
+        if (toDate && xDate > toDate) return;
+        if (x.amt > 0 && x.cat === 'Dining') diningRoomRevenue += Number(x.amt);
+      });
+    });
+
+    const diningRevenue = diningDirectRevenue + diningRoomRevenue;
     const netOverallRevenue = Math.max(0, roomRevenue + diningRevenue + incidentalsRevenue - refundsTotal);
 
     // Total available room capacity nights

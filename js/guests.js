@@ -125,6 +125,7 @@
         .sort((a, b) => a.i.localeCompare(b.i))[0];
 
       const nights = validStays.reduce((sum, r) => sum + Data.nts(r), 0);
+      const completedNights = checkedOutStays.reduce((sum, r) => sum + Data.nts(r), 0);
       const paid = g.stays.reduce((sum, r) => sum + Data.paidAmt(r), 0);
       const balance = g.stays.reduce((sum, r) => sum + Data.balOf(r), 0);
 
@@ -136,9 +137,9 @@
       // Tier calculation using canonical Data.getGuestTier
       const tierObj = Data.getGuestTier ? Data.getGuestTier(nights) : null;
       const tier = (tierObj && tierObj.name) ? tierObj.name : (typeof tierObj === 'string' ? tierObj : (
-        nights >= (CONFIG.loyalty?.platinumNights || 20) ? 'Platinum' :
-        nights >= (CONFIG.loyalty?.goldNights || 10) ? 'Gold' :
-        nights >= (CONFIG.loyalty?.silverNights || 5) ? 'Silver' : 'Member'
+        completedNights >= (CONFIG.loyalty?.platinumNights || 25) ? 'Platinum' :
+        completedNights >= (CONFIG.loyalty?.goldNights || 12) ? 'Gold' :
+        completedNights >= (CONFIG.loyalty?.silverNights || 5) ? 'Silver' : 'Member'
       ));
 
       const loyaltyPoints = Data.getLoyaltyPoints ? Data.getLoyaltyPoints(g.name) : 0;
@@ -689,9 +690,9 @@
             <label for="ngTier">Initial Loyalty Tier</label>
             <select id="ngTier">
               <option value="Member">Member (0–4 nights)</option>
-              <option value="Silver">Silver (5–9 nights)</option>
-              <option value="Gold">Gold (10–19 nights)</option>
-              <option value="Platinum">Platinum (20+ nights)</option>
+              <option value="Silver">Silver (5–11 nights)</option>
+              <option value="Gold">Gold (12–24 nights)</option>
+              <option value="Platinum">Platinum (25+ nights)</option>
             </select>
           </div>
         </div>
@@ -965,6 +966,19 @@
             <input type="number" id="walkInGuests" min="1" max="6" value="2">
           </div>
           <div class="field">
+            <label for="walkInIdType">Gov ID Type *</label>
+            <select id="walkInIdType">
+              <option value="Driver's License">Driver's License</option>
+              <option value="Passport">Passport</option>
+              <option value="UMID">UMID</option>
+              <option value="National ID">National ID</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="walkInIdNumber">Gov ID Number *</label>
+            <input type="text" id="walkInIdNumber" required placeholder="e.g. N01-12-345678">
+          </div>
+          <div class="field">
             <label for="walkInMethod">Payment Method *</label>
             <select id="walkInMethod">
               <option value="Cash">Cash at Front Desk</option>
@@ -1058,44 +1072,38 @@
         return;
       }
 
-      const code = Data.nextId('HTL-');
-      const orNo = Data.nextOR();
+      try {
+        const idType = ($('walkInIdType')?.value || "Driver's License").trim();
+        const idNumber = ($('walkInIdNumber')?.value || 'ID-VERIFIED').trim();
 
-      const newRes = {
-        c: code,
-        g: name,
-        ph: phone,
-        t: typeName,
-        n: Number(roomNum),
-        rt: typeObj.r,
-        i: dIn,
-        o: dOut,
-        gu: guests,
-        m: method,
-        p: payAmt >= total ? 'Paid' : 'Partial',
-        st: 'Checked-in',
-        note: 'Walk-in guest registered at front desk',
-        walkIn: true,
-        created: today(),
-        pay: [{
-          id: orNo,
-          or: orNo,
-          d: `${today()} ${nowTime()}`,
-          a: payAmt,
-          amt: payAmt,
+        const createdRes = Data.createReservation({
+          g: name,
+          ph: phone,
+          email: '',
+          t: typeName,
+          n: roomNum,
+          rt: typeObj.r,
+          i: dIn,
+          o: dOut,
+          gu: guests,
           m: method,
-          k: 'Deposit',
-          ref: 'Walk-in Desk Settlement'
-        }],
-        x: []
-      };
+          source: 'Walk-in',
+          idType,
+          idNumber,
+          checkInNow: true,
+          initialPayment: payAmt > 0 ? {
+            amount: payAmt,
+            method,
+            kind: 'Deposit',
+            note: 'Walk-in front desk settlement'
+          } : null
+        });
 
-      const resList = Data.getReservations();
-      resList.unshift(newRes);
-      Data.saveReservations(resList);
-
-      Data.audit('Walk-in Check-in', 'res', code, `Walk-in guest ${name} checked into Room ${roomNum}. Paid: ${peso(payAmt)}.`);
-      toast(`Walk-in guest ${name} checked into Room ${roomNum}`, 'ok');
+        toast(`Walk-in guest ${name} checked into Room ${roomNum} (${createdRes.c})`, 'ok');
+      } catch (err) {
+        toast(err.message || 'Walk-in check-in failed', 'bad');
+        return;
+      }
       closeModal();
       window.dispatchEvent(new CustomEvent('pupsj:data-change'));
       renderApp();

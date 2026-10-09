@@ -536,14 +536,14 @@ function openBookingModal(initialType, checkInDate, checkOutDate, guestCount = 2
               idType,
               idNumber,
               checkInNow,
-              initialPayment: {
+              initialPayment: (isStaffWalkIn || (method === 'Credit Card' || method === 'Debit Card' || method === 'GCash' || method === 'Maya')) ? {
                 amount: state.depDue,
                 method: method,
                 kind: 'Deposit',
                 note: isStaffWalkIn ? 'Walk-in desk guarantee settlement' : '50% guarantee deposit on booking',
                 auth: 'AUTH-' + Math.floor(100000 + Math.random() * 900000),
                 ref: 'DEP-' + Date.now().toString().slice(-6)
-              }
+              } : null
             });
 
             if (activePromo) {

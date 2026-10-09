@@ -37,7 +37,7 @@
 
   function getHkStaff() {
     const allStaff = Data.getStaff();
-    const hkStaff = allStaff.filter(s => s.active && (s.role === 'Housekeeping' || s.role === 'Admin' || s.role === 'Manager'));
+    const hkStaff = allStaff.filter(s => s.active && (s.role === 'Housekeeping' || s.role === 'Manager'));
     return hkStaff.length ? hkStaff : allStaff.filter(s => s.active);
   }
 
@@ -58,19 +58,19 @@
       };
 
       // Determine active occupancy
-      const occupiedRes = reservations.find(r => Number(r.n) === roomNum && r.st === 'Checked-in');
+      const occupiedRes = reservations.find(r => Number(r.rm != null ? r.rm : r.n) === roomNum && (r.st === 'Checked-in' || r.s === 'Checked-in'));
       const isOccupied = !!occupiedRes;
       const isMx = rm.st === 'Maintenance' || (typeof Data.isRoomUnderMaintenance === 'function' && Data.isRoomUnderMaintenance(roomNum));
 
       // Next arrival (upcoming confirmed or pending reservation)
       const nextRes = reservations
-        .filter(r => Number(r.n) === roomNum && (r.st === 'Confirmed' || r.st === 'Pending') && r.o > td)
+        .filter(r => Number(r.rm != null ? r.rm : r.n) === roomNum && (r.st === 'Confirmed' || r.st === 'Pending' || r.s === 'Confirmed' || r.s === 'Pending') && (r.co || r.o) > td)
         .sort((a, b) => (a.i || '').localeCompare(b.i || ''))[0];
 
       // Auto priority derivation based on next arrival
       let autoPri = 'Low';
       if (nextRes) {
-        const diff = dateDiff(td, nextRes.i);
+        const diff = dateDiff(td, nextRes.ci || nextRes.i);
         if (diff <= 0) autoPri = 'Urgent';
         else if (diff === 1) autoPri = 'High';
         else if (diff <= 3) autoPri = 'Medium';
@@ -196,6 +196,11 @@
             </div>
             <div>
               <button class="btn-ghost" id="btnResetHkFilters" style="height: 38px;">Reset</button>
+            </div>
+            <div style="margin-left: auto;">
+              <button class="btn-secondary" id="btnAssignAllUnassigned" style="height: 38px;">
+                <span class="ic" data-icon="users">[ICON: users]</span> Assign All Unassigned
+              </button>
             </div>
           </div>
         </div>

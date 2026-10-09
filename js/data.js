@@ -391,13 +391,15 @@ const generateSeeds = () => {
     { id: 'TBL-4', num: 4, name: 'Table 4', seats: 6, area: 'Main Dining', status: 'Free', st: 'Free' },
     { id: 'TBL-5', num: 5, name: 'Table 5', seats: 2, area: 'Garden Terrace', status: 'Free', st: 'Free' },
     { id: 'TBL-6', num: 6, name: 'Table 6', seats: 4, area: 'Garden Terrace', status: 'Free', st: 'Free' },
-    { id: 'TBL-7', num: 7, name: 'Table 7', seats: 8, area: 'Private Room', status: 'Free', st: 'Free' }
+    { id: 'TBL-7', num: 7, name: 'Table 7', seats: 8, area: 'Private Room', status: 'Free', st: 'Free' },
+    { id: 'TBL-8', num: 8, name: 'Table 8', seats: 2, area: 'Bar Lounge', status: 'Free', st: 'Free' },
+    { id: 'TBL-9', num: 9, name: 'Table 9', seats: 4, area: 'Bar Lounge', status: 'Free', st: 'Free' }
   ];
 
   // Table Reservations
   const tableRes = [
     {
-      code: 'TBL-101',
+      code: 'TRS-101',
       guestName: 'Roberto Gomez',
       guest: 'Roberto Gomez',
       phone: '+63 917 555 1234',
@@ -413,7 +415,7 @@ const generateSeeds = () => {
       created: `${T} 10:00`
     },
     {
-      code: 'TBL-102',
+      code: 'TRS-102',
       guestName: 'Lucia Santos',
       guest: 'Lucia Santos',
       phone: '+63 918 333 4567',
@@ -724,6 +726,23 @@ const generateSeeds = () => {
 
 // ─── Data Layer Manager & Migration System ───
 const Data = {
+  emit(entity, action, detail) {
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      try {
+        const CustomEventCls = typeof CustomEvent !== 'undefined' ? CustomEvent : (window && window.CustomEvent);
+        if (CustomEventCls) {
+          window.dispatchEvent(new CustomEventCls('pupsj:data-change', {
+            detail: { entity, action, detail, timestamp: Date.now() }
+          }));
+        }
+      } catch (e) {}
+    }
+  },
+  runExpiryJobs() {
+    if (typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.ReservationService) {
+      PUPSJ_Services.ReservationService.runExpiryJobs();
+    }
+  },
   // Initializes or migrates storage on startup
   init() {
     const curSchema = store.get('schema', 0);
@@ -787,14 +806,7 @@ const Data = {
   },
 
 
-  nextOR() {
-    const res = this.getReservations();
-    const maxNum = Math.max(0, ...res.flatMap(r => r.pay || []).map(p => {
-      const m = /^OR-(\d{5})$/.exec(p.id || p.or);
-      return m ? Number(m[1]) : 0;
-    }));
-    return 'OR-' + String(maxNum + 1).padStart(5, '0');
-  },
+
 
   // ─── Room Types & Rooms ───
   getTypes() {
@@ -1003,9 +1015,10 @@ const Data = {
 
     if (date === T) {
       const roomHk = this.getRoomHK(num);
-      if (roomHk.s !== 'Clean') {
-        return { s: 'Cleaning' };
-      }
+      if (roomHk.s === 'Dirty') return { s: 'Dirty' };
+      if (roomHk.s === 'In progress') return { s: 'In progress' };
+      if (roomHk.s === 'Clean' || roomHk.s === 'Inspected') return { s: 'Available' };
+      if (roomHk.s) return { s: roomHk.s };
     }
 
     return { s: 'Available' };
@@ -1073,6 +1086,19 @@ const Data = {
   },
   saveRes(list) {
     this.saveReservations(list);
+  },
+  saveReservation(res) {
+    if (!res || !res.c) return null;
+    const list = this.getReservations();
+    const idx = list.findIndex(r => r.c.toUpperCase() === String(res.c).toUpperCase());
+    if (idx !== -1) {
+      list[idx] = res;
+    } else {
+      list.unshift(res);
+    }
+    this.saveReservations(list);
+    this.emit('Reservation', 'save', res.c);
+    return res;
   },
   findRes(code) {
     if (!code) return null;
@@ -1236,12 +1262,15 @@ const Data = {
 
   // Folio Calculations
   nts(r) {
-    if (!r || !r.i || !r.o) return 1;
-    return Math.max(1, dateDiff(r.i, r.o));
+    if (!r) return 1;
+    const ci = r.ci || r.i;
+    const co = r.co || r.o;
+    if (!ci || !co) return 1;
+    return Math.max(1, dateDiff(ci, co));
   },
   roomChg(r) {
     if (!r) return 0;
-    const typeRate = Number(r.rt) || (DEFAULT_TYPES.find(t => t.n === r.t) || {}).r || 3200;
+    const typeRate = Number(r.rt || r.rate) || (DEFAULT_TYPES.find(t => t.n === r.t) || {}).r || 3200;
     let base = this.nts(r) * typeRate;
     if (r.promo) {
       const pType = r.promo.type;
@@ -1279,6 +1308,8 @@ const Data = {
     if (!r || r.st === 'Cancelled') return 0;
     return Math.max(0, this.tot(r) - this.paidAmt(r));
   },
+  bal(r) { return this.balOf(r); },
+  balance(r) { return this.balOf(r); },
   depAmt(r) {
     if (!r) return 0;
     return Math.ceil(this.roomChg(r) * (CONFIG.depositPct / 100));
@@ -1339,7 +1370,7 @@ const Data = {
 
     r.x = r.x || [];
     const entry = {
-      id: Date.now(),
+      id: this.nextId('AUD-'),
       d: today(),
       desc: String(desc).trim(),
       amt: Math.round(Number(amount)),
@@ -1382,9 +1413,14 @@ const Data = {
   },
 
   // Check-Out Domain Rule: mark Checked-out, mark room Dirty in HK, award loyalty points
-  checkOut(code) {
+  checkOut(code, overrideReason = '') {
     const r = this.findRes(code);
     if (!r) return { success: false, error: 'Reservation not found.' };
+
+    const bal = this.balance ? this.balance(r) : 0;
+    if (bal > 0 && !overrideReason) {
+      return { success: false, error: `Cannot check out with outstanding balance of ₱${bal.toLocaleString()}. Settle folio first.`, balance: bal };
+    }
 
     r.st = 'Checked-out';
     this.updateReservation(r.c, r);
@@ -1411,6 +1447,13 @@ const Data = {
 
     const r = this.findRes(code);
     if (!r) return { success: false, error: 'Reservation not found.' };
+
+    if (r.st === 'Checked-in' || r.s === 'Checked-in') {
+      return { success: false, error: 'Checked-in stays cannot be cancelled. Use early check-out instead.' };
+    }
+    if (r.st === 'Cancelled' || r.s === 'Cancelled') {
+      return { success: false, error: 'Reservation is already cancelled.' };
+    }
 
     // Guest ownership check
     if (guestSession && !staffSession) {
@@ -1456,7 +1499,7 @@ const Data = {
     this.syncPaymentStatus(r);
     this.updateReservation(r.c, r);
     this.audit('Cancellation', 'Reservation', r.c, `Cancelled by ${by}. Retained: ${peso(retainedFee)}, Refunded: ${peso(refundAmt)}`);
-    return { success: true, refundAmt, retainedFee, res: r };
+    return { success: true, refundAmt, retainedFee, fee: retainedFee, res: r };
   },
 
   // Claim Walk-in / Staff-assisted Booking into a Guest Portal Account
@@ -1800,7 +1843,7 @@ const Data = {
 
     // Dynamic table assignment: 90-minute slot collision check
     const tables = this.getTables();
-    const existingTableRes = this.getTableRes().filter(t => t.date === date && t.status !== 'Cancelled');
+    const existingTableRes = this.getTableRes().filter(t => t.date === date && t.status !== 'Cancelled' && t.status !== 'Completed' && t.status !== 'No-show');
 
     const eligibleTables = tables
       .filter(tbl => tbl.seats >= party)
@@ -1825,7 +1868,7 @@ const Data = {
     }
 
     const list = this.getTableRes();
-    const code = this.nextId('TBL-');
+    const code = this.nextId('TRS-');
     const tableNum = assignedTable ? assignedTable.num : Number(data.tableNum || (eligibleTables[0] ? eligibleTables[0].num : 1));
     const tableId = assignedTable ? assignedTable.id : (tableNum ? 'TBL-' + tableNum : '');
 
@@ -1967,25 +2010,71 @@ const Data = {
     const order = list.find(o => o.code === code);
     if (!order) return { success: false, error: 'Order not found.' };
 
-    if (paymentKind === 'room') {
-      const res = this.findRes(order.resCode || order.linkedRes);
+    let method = 'Cash';
+    if (typeof paymentKind === 'object' && paymentKind !== null) {
+      meta = { ...paymentKind, ...meta };
+      paymentKind = meta.method || 'Cash';
+      method = meta.method || 'Cash';
+    } else if (typeof paymentKind === 'string') {
+      method = meta.method || paymentKind;
+    }
+
+    if (paymentKind === 'room' || paymentKind === 'Room folio' || paymentKind === 'Room Charge') {
+      const res = this.findRes(order.resCode || order.linkedRes || meta.resCode);
       if (!res || res.st !== 'Checked-in') {
         return { success: false, error: 'Cannot charge to room: reservation is not currently checked-in.' };
       }
       this.addCharge(res, `Restaurant: ${order.code}`, order.subtotal, 'Dining');
       order.payStatus = 'Room folio';
       order.paymentKind = `Charged to ${res.c}`;
+      order.linkedRes = res.c;
+      order.resCode = res.c;
     } else {
       const orNo = this.nextOR();
       order.payStatus = 'Paid';
-      order.paymentKind = `${meta.method || 'Cash'} (OR: ${orNo})`;
+      order.paymentKind = `${method} (OR: ${orNo})`;
       meta.orNum = orNo;
+
+      // Record in unified payments ledger
+      const payments = this.getPayments();
+      payments.push({
+        orNo,
+        or: orNo,
+        id: orNo,
+        date: today(),
+        time: nowTime(),
+        timestamp: Date.now(),
+        kind: 'Payment',
+        method: method,
+        amount: Number(meta.amount != null ? meta.amount : (order.subtotal || 0)),
+        refType: 'Order',
+        refId: order.code,
+        authRef: meta.ref || `POS-${order.code}`,
+        cashier: (this.getStaffSession() && this.getStaffSession().name) || 'Cashier',
+        status: 'Completed'
+      });
+      this.savePayments(payments);
     }
 
-    order.status = 'Served';
+    // Do NOT force order.status = 'Served'! Kitchen and billing status are decoupled (BR-030).
+    // If order is Dine-in and already Served, payment transition triggers table status
+    if (order.type === 'Dine-in' && (order.table || order.tableNo)) {
+      const tNum = order.table || order.tableNo;
+      if (order.status === 'Served') {
+        const tables = this.getTables();
+        const t = tables.find(x => x.num === tNum || x.id === tNum);
+        if (t) {
+          t.st = 'Needs cleaning';
+          t.status = 'Needs cleaning';
+          this.saveTables(tables);
+        }
+      }
+    }
+
     order.updated = `${today()} ${nowTime()}`;
     this.saveOrders(list);
-    this.audit(`Billed order ${code}`, 'Order', code, `Method: ${paymentKind}`);
+    this.audit(`Billed order ${code}`, 'Order', code, `Method: ${method || paymentKind}, OR: ${meta.orNum || 'FOLIO'}`);
+    this.emit('Order', 'bill', code);
     return { success: true, orNum: meta.orNum || '', order };
   },
 
@@ -2300,6 +2389,9 @@ const Data = {
   },
   saveLoyaltyLedger(list) {
     store.set('loyalty', list);
+  },
+  adjustLoyaltyPoints(guestName, points, notes = '', ref = '') {
+    return this.addLoyaltyPoints(guestName, points, notes, ref);
   },
   addLoyaltyPoints(guestName, points, notes = '', ref = '') {
     const list = this.getLoyaltyLedger();

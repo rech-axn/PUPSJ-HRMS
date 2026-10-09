@@ -11,6 +11,113 @@
   let oosFilter = '';
   let searchQuery = '';
   let page = 1;
+
+  function findConflictingReservations(roomNum) {
+    const allRes = Data.getReservations();
+    const todayStr = today();
+    return allRes.filter(r => {
+      const rRoom = Number(r.rm != null ? r.rm : r.n);
+      if (rRoom !== Number(roomNum)) return false;
+      const rStatus = r.st || r.s;
+      if (rStatus === 'Checked-in') return true;
+      if (rStatus === 'Confirmed') {
+        const co = r.co || r.o || todayStr;
+        if (co >= todayStr) return true;
+      }
+      return false;
+    });
+  }
+
+  function openRelocationAssistantModal(roomNum, conflicts, onResolved) {
+    const types = Data.getTypes();
+    const bodyHtml = `
+      <div style="font-size: 13px;">
+        <div style="background: rgba(192, 57, 43, 0.08); border-left: 4px solid var(--bad); padding: 12px; margin-bottom: 14px; border-radius: 4px;">
+          <b style="color: var(--bad); font-size: 14px;">Maintenance Conflict Alert</b>
+          <p style="margin: 4px 0 0 0;">
+            Room <b>${roomNum}</b> has <b>${conflicts.length} active or upcoming reservation(s)</b> that will be affected by flagging this room Out of Service.
+          </p>
+        </div>
+
+        <p class="text-sm">Please relocate each affected guest to an available alternative room:</p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+          ${conflicts.map(r => {
+            const freeSameType = Data.freeRooms(r.t, r.ci || r.i, r.co || r.o, r.c);
+            return `
+              <div class="card" style="padding: 10px 12px; background: var(--surface);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <div>
+                    <b>${esc(r.g)}</b> (${r.c})
+                    <div class="text-xs text-secondary">${esc(r.t)} &middot; ${fmtDate(r.ci || r.i)} to ${fmtDate(r.co || r.o)} &middot; Status: ${r.st || r.s}</div>
+                  </div>
+                </div>
+                <div style="margin-top: 8px; display: flex; gap: 6px; align-items: center;">
+                  <select id="relocateSelect_${r.c}" style="font-size: 12px; height: 30px; flex: 1;">
+                    ${freeSameType.map(rm => `<option value="${rm.n}">Room ${rm.n} (${rm.t})</option>`).join('')}
+                    ${freeSameType.length === 0 ? '<option value="">No free rooms of same type</option>' : ''}
+                  </select>
+                  <button type="button" class="btn btn-sm" onclick="relocateBooking('${r.c}', '${roomNum}')" ${freeSameType.length === 0 ? 'disabled' : ''}>
+                    Relocate
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div style="border-top: 1px solid var(--line); padding-top: 12px;">
+          <div class="text-xs text-secondary" style="margin-bottom: 6px;">Or authorize Superadmin emergency Out-of-Service override:</div>
+          <div class="field" style="margin-bottom: 8px;">
+            <input type="text" id="oosOverrideReason" placeholder="Mandatory override justification...">
+          </div>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <div style="display: flex; justify-content: space-between; width: 100%;">
+        <button type="button" class="btn-secondary" onclick="closeModal()">Cancel Action</button>
+        <button type="button" class="btn-danger btn-sm" id="btnConfirmOosOverride">Confirm Override</button>
+      </div>
+    `;
+
+    showModal(`Room ${roomNum} &mdash; Relocation Required`, bodyHtml, footerHtml, { maxWidth: '500px' });
+
+    window.relocateBooking = function(resCode, originalRoom) {
+      const select = $('relocateSelect_' + resCode);
+      if (!select || !select.value) {
+        toast('No destination room selected', 'warn');
+        return;
+      }
+      const newRoom = parseInt(select.value, 10);
+      Data.updateReservation(resCode, { n: newRoom, rm: newRoom });
+      Data.audit('Guest Relocated', 'Reservation', resCode, `Relocated from Room ${originalRoom} to Room ${newRoom} due to maintenance OOS`);
+      toast(`Reservation ${resCode} relocated to Room ${newRoom}`, 'ok');
+      closeModal();
+      // Recheck if other conflicts remain
+      const remaining = findConflictingReservations(originalRoom);
+      if (remaining.length > 0) {
+        openRelocationAssistantModal(originalRoom, remaining, onResolved);
+      } else {
+        toast('All conflicts resolved!', 'ok');
+        if (onResolved) onResolved();
+      }
+    };
+
+    $('btnConfirmOosOverride').onclick = () => {
+      const reason = ($('oosOverrideReason').value || '').trim();
+      if (!reason) {
+        toast('Please enter a mandatory override justification', 'warn');
+        return;
+      }
+      Data.audit('Emergency OOS Override', 'Room', String(roomNum), `Flagged Room ${roomNum} OOS despite ${conflicts.length} conflicting stays. Reason: ${reason}`);
+      toast('Superadmin override recorded in audit log', 'warn');
+      closeModal();
+      if (onResolved) onResolved();
+    };
+  }
+
   const pageSize = 12;
   let initialized = false;
 
@@ -235,6 +342,7 @@
           <td>
             <div style="font-weight: 600;">${esc(m.issue)}</div>
             ${m.notes ? `<div class="text-xs text-muted">${esc(m.notes)}</div>` : ''}
+            ${(!isResolved && m.created && dateDiff(m.created, today()) >= (pri === 'Urgent' ? 0 : pri === 'High' ? 1 : 2)) ? `<span class="pill pill--bad" style="font-size: 10px; margin-top: 2px;">OVERDUE SLA</span>` : ''}
           </td>
           <td><span class="pill ${priClass}">${esc(pri)}</span></td>
           <td>
@@ -308,7 +416,7 @@
 
       // If room was Out of Service, restore it to turnover pool (requires housekeeping inspection)
       if (item.outOfService ?? item.oos) {
-        Data.setRoomHK(item.room, { s: 'Dirty', p: 'Standard' });
+        Data.setRoomHK(item.room, { s: 'Dirty', p: item.priority === 'Urgent' ? 'Urgent' : 'High' });
       }
 
       Data.saveMaintenance(list);
@@ -410,15 +518,48 @@
         return;
       }
 
+      function commitNewWorkOrder() {
+        const list = Data.getMaintenance();
+        const id = Data.nextId('MNT-');
+
+        list.unshift({
+          id,
+          room: roomNum,
+          issue,
+          priority: pri,
+          pri: pri,
+          outOfService: oos,
+          oos: oos,
+          assignedTo: assigned,
+          assigned: assigned,
+          notes,
+          created: today(),
+          status: 'Open',
+          st: 'Open',
+          resolved: null
+        });
+
+        Data.saveMaintenance(list);
+        Data.audit('Create Maintenance', 'mReq', id, `Work order ${id} logged for Room ${roomNum}: ${issue} (OOS: ${oos ? 'Yes' : 'No'})`);
+        toast(`Work order ${id} created successfully`, 'ok');
+        closeModal();
+        window.dispatchEvent(new CustomEvent('pupsj:data-change'));
+        renderApp();
+      }
+
       // Check upcoming reservations if Out of Service requested
       if (oos) {
-        const reservations = Data.getReservations();
-        const activeRes = reservations.find(r => Number(r.n) === roomNum && (r.st === 'Checked-in' || (r.st === 'Confirmed' && r.o >= today() && r.i <= today())));
-        if (activeRes) {
-          toast(`Cannot mark Room ${roomNum} Out of Service: Active reservation exists (${activeRes.c} for ${activeRes.g})`, 'bad');
+        const conflicts = findConflictingReservations(roomNum);
+        if (conflicts.length > 0) {
+          openRelocationAssistantModal(roomNum, conflicts, () => {
+            commitNewWorkOrder();
+          });
           return;
         }
       }
+
+      commitNewWorkOrder();
+      return;
 
       const list = Data.getMaintenance();
       const id = Data.nextId('MNT-');
@@ -530,35 +671,52 @@
     showModal(`Edit Work Order &mdash; ${esc(item.id)}`, bodyHtml, footerHtml, { maxWidth: '520px' });
 
     $('btnSaveMxEdit').onclick = () => {
-      item.issue = ($('editMxIssue').value || '').trim();
+      const issueVal = ($('editMxIssue').value || '').trim();
       const newPri = $('editMxPriority').value;
-      item.priority = newPri;
-      item.pri = newPri;
       const newAssigned = $('editMxStaff').value;
-      item.assignedTo = newAssigned;
-      item.assigned = newAssigned;
-      item.notes = ($('editMxNotes').value || '').trim();
+      const notesVal = ($('editMxNotes').value || '').trim();
       const oldSt = item.status || item.st;
       const newSt = $('editMxStatus').value;
-      item.status = newSt;
-      item.st = newSt;
       const newOos = $('editMxOos').value === 'yes';
-      item.outOfService = newOos;
-      item.oos = newOos;
 
-      if (newSt === 'Resolved' && oldSt !== 'Resolved') {
-        item.resolved = today();
-        if (newOos) {
-          Data.setRoomHK(item.room, { s: 'Dirty', p: 'Standard' });
+      function commitEdit() {
+        item.issue = issueVal;
+        item.priority = newPri;
+        item.pri = newPri;
+        item.assignedTo = newAssigned;
+        item.assigned = newAssigned;
+        item.notes = notesVal;
+        item.status = newSt;
+        item.st = newSt;
+        item.outOfService = newOos;
+        item.oos = newOos;
+
+        if (newSt === 'Resolved' && oldSt !== 'Resolved') {
+          item.resolved = today();
+          if (newOos) {
+            Data.setRoomHK(item.room, { s: 'Dirty', p: item.priority === 'Urgent' ? 'Urgent' : 'High' });
+          }
+        }
+
+        Data.saveMaintenance(list);
+        Data.audit('Edit Maintenance', 'mReq', item.id, `Updated work order ${item.id} for Room ${item.room}`);
+        toast(`Work order ${item.id} updated`, 'ok');
+        closeModal();
+        window.dispatchEvent(new CustomEvent('pupsj:data-change'));
+        renderApp();
+      }
+
+      if (newOos && !(item.outOfService ?? item.oos)) {
+        const conflicts = findConflictingReservations(item.room);
+        if (conflicts.length > 0) {
+          openRelocationAssistantModal(item.room, conflicts, () => {
+            commitEdit();
+          });
+          return;
         }
       }
 
-      Data.saveMaintenance(list);
-      Data.audit('Edit Maintenance', 'mReq', item.id, `Updated work order ${item.id} for Room ${item.room}`);
-      toast(`Work order ${item.id} updated`, 'ok');
-      closeModal();
-      window.dispatchEvent(new CustomEvent('pupsj:data-change'));
-      renderApp();
+      commitEdit();
     };
 
     $('btnDeleteMxOrder').onclick = () => {

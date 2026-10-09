@@ -54,7 +54,16 @@
           refCode: r.c,
           party: `${r.g} (Room ${r.n})`,
           type: p.k || p.t || 'Payment',
-          method: p.m || p.method || 'Cash',
+          method: (() => {
+            const raw = (p.m || p.method || 'Cash').toLowerCase();
+            if (raw.includes('credit')) return 'Credit Card';
+            if (raw.includes('debit')) return 'Debit Card';
+            if (raw.includes('gcash')) return 'GCash';
+            if (raw.includes('maya')) return 'Maya';
+            if (raw.includes('bank')) return 'Bank Transfer';
+            if (raw.includes('room')) return 'Room Folio';
+            return 'Cash';
+          })(),
           refInfo: p.ref || p.auth || 'Front Desk',
           amount: Number(p.a != null ? p.a : p.amt) || 0
         });
@@ -396,7 +405,7 @@
     const method = $('ledgerMethodFilter')?.value || '';
 
     return list.filter(t => {
-      if (method && t.method !== method) return false;
+      if (method && (t.method || '').toLowerCase() !== method.toLowerCase()) return false;
       if (q) {
         const text = `${t.or} ${t.source} ${t.refCode} ${t.party} ${t.refInfo}`.toLowerCase();
         if (!text.includes(q)) return false;

@@ -1,7 +1,8 @@
 /* ==========================================================================
    PUPSJ Hotel & Restaurant — Tables & Floor Management (tables.js)
    Floor grid with live table status, table reservations lifecycle
-   (Confirm, Seat, Complete, Cancel, No-show), and walk-in seating.
+   (Confirm, Seat, Complete, Cancel, No-show), best-fit seating,
+   and dynamic derivation from active POS orders and bookings.
    ========================================================================== */
 'use strict';
 
@@ -13,14 +14,57 @@
     renderApp();
   }
 
+  function getDynamicTableStatus(t, orders, tableRes) {
+    const num = t.num != null ? t.num : t.id;
+    // Check active dine-in orders
+    const activeOrder = orders.find(o => 
+      o.type === 'Dine-in' && 
+      (Number(o.table) === Number(num) || Number(o.tableNo) === Number(num)) && 
+      o.status !== 'Cancelled' && 
+      !(o.status === 'Served' && (o.payStatus === 'Paid' || o.payStatus === 'Room folio'))
+    );
+
+    if (activeOrder) {
+      return { status: 'Occupied', activeOrder };
+    }
+
+    // If manual status is Needs cleaning, preserve it until cleared
+    if (t.st === 'Needs cleaning' || t.status === 'Needs cleaning') {
+      return { status: 'Needs cleaning', activeOrder: null };
+    }
+
+    // Check table reservations today
+    const nowMin = typeof parseTimeToMinutes === 'function' ? parseTimeToMinutes(nowTime()) : 0;
+    const activeRes = tableRes.find(r => {
+      if (r.date !== today()) return false;
+      if (Number(r.tableNum) !== Number(num) && Number(r.table) !== Number(num)) return false;
+      if (r.status !== 'Confirmed' && r.status !== 'Seated') return false;
+      const rMin = typeof parseTimeToMinutes === 'function' ? parseTimeToMinutes(r.time) : 0;
+      return Math.abs(nowMin - rMin) <= 90;
+    });
+
+    if (activeRes) {
+      if (activeRes.status === 'Seated') {
+        return { status: 'Occupied', activeOrder: null, activeRes };
+      }
+      return { status: 'Reserved', activeOrder: null, activeRes };
+    }
+
+    return { status: t.st || t.status || 'Free', activeOrder: null };
+  }
+
   function renderApp() {
     const app = $('tablesApp');
     if (!app) return;
 
     const tables = Data.getTables();
     const tableRes = Data.getTableRes();
-    const freeCount = tables.filter(t => t.st === 'Free').length;
-    const occupiedCount = tables.filter(t => t.st === 'Occupied').length;
+    const orders = Data.getOrders();
+
+    const tableStatuses = tables.map(t => ({ table: t, ...getDynamicTableStatus(t, orders, tableRes) }));
+    const freeCount = tableStatuses.filter(s => s.status === 'Free').length;
+    const occupiedCount = tableStatuses.filter(s => s.status === 'Occupied').length;
+    const needsCleaningCount = tableStatuses.filter(s => s.status === 'Needs cleaning').length;
     const pendingResCount = tableRes.filter(r => r.status === 'Pending').length;
 
     app.innerHTML = `
@@ -50,12 +94,12 @@
           <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--bad); margin-top: 4px;">${occupiedCount}</div>
         </div>
         <div class="card" style="padding: 16px;">
-          <div class="text-sm text-secondary">Pending Bookings</div>
-          <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--warn); margin-top: 4px;">${pendingResCount}</div>
+          <div class="text-sm text-secondary">Needs Cleaning</div>
+          <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--warn); margin-top: 4px;">${needsCleaningCount}</div>
         </div>
         <div class="card" style="padding: 16px;">
-          <div class="text-sm text-secondary">Total Dining Capacity</div>
-          <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--gold-ink); margin-top: 4px;">${tables.reduce((s, t) => s + t.seats, 0)} Seats</div>
+          <div class="text-sm text-secondary">Pending Bookings</div>
+          <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--gold-ink); margin-top: 4px;">${pendingResCount}</div>
         </div>
       </div>
 
@@ -84,7 +128,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;" id="floorGridContainer">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;" id="floorGridContainer">
           <!-- Rendered dynamically -->
         </div>
       </div>
@@ -155,20 +199,25 @@
     if (!container) return;
 
     let tables = Data.getTables();
+    const orders = Data.getOrders();
+    const tableRes = Data.getTableRes();
+
     if (areaFilter) {
       tables = tables.filter(t => (t.area || '').toLowerCase().includes(areaFilter.toLowerCase()));
     }
 
     container.innerHTML = tables.map(t => {
       const num = t.num != null ? t.num : t.id;
-      const st = t.status || t.st || 'Free';
+      const { status: st, activeOrder, activeRes } = getDynamicTableStatus(t, orders, tableRes);
+
       let pillClass = 'pill--ok';
-      if (st === 'Occupied') pillClass = 'pill--bad';
-      else if (st === 'Reserved') pillClass = 'pill--info';
-      else if (st === 'Needs cleaning') pillClass = 'pill--warn';
+      let borderCol = 'var(--ok)';
+      if (st === 'Occupied') { pillClass = 'pill--bad'; borderCol = 'var(--bad)'; }
+      else if (st === 'Reserved') { pillClass = 'pill--info'; borderCol = 'var(--info)'; }
+      else if (st === 'Needs cleaning') { pillClass = 'pill--warn'; borderCol = 'var(--warn)'; }
 
       return `
-        <div class="card" style="padding: 16px; border-top: 4px solid ${st === 'Free' ? 'var(--ok)' : st === 'Occupied' ? 'var(--bad)' : 'var(--warn)'};">
+        <div class="card" style="padding: 16px; border-top: 4px solid ${borderCol};">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
             <div>
               <b style="font-size: 18px;">Table ${num}</b>
@@ -177,9 +226,26 @@
             <span class="pill ${pillClass}">${st}</span>
           </div>
 
-          <div style="margin: 10px 0; font-size: 13px;">
+          <div style="margin: 8px 0; font-size: 13px;">
             <span class="text-secondary">Capacity:</span> <b>${t.seats} Guests</b>
           </div>
+
+          ${activeOrder ? `
+            <div style="background: rgba(0,0,0,0.03); padding: 8px; border-radius: 6px; margin: 8px 0; font-size: 12px;">
+              <div style="display:flex; justify-content:space-between;">
+                <span>Order: <b>${activeOrder.code}</b></span>
+                <span class="pill pill--muted" style="font-size:10px;">${activeOrder.status}</span>
+              </div>
+              <div style="margin-top: 4px; display:flex; justify-content:space-between; color: var(--gold-ink); font-weight:600;">
+                <span>Total: ${peso(activeOrder.subtotal || 0)}</span>
+                <a href="orders.html?code=${activeOrder.code}" style="color:var(--brand-ink); text-decoration:underline;">POS Bill &rarr;</a>
+              </div>
+            </div>
+          ` : activeRes ? `
+            <div style="background: rgba(0,0,0,0.03); padding: 8px; border-radius: 6px; margin: 8px 0; font-size: 12px;">
+              <span>Reserved for: <b>${esc(activeRes.guestName || activeRes.guest)}</b> (${activeRes.time})</span>
+            </div>
+          ` : ''}
 
           <div style="display: flex; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px;">
             ${st === 'Free' ? `
@@ -231,15 +297,15 @@
             <div style="display: flex; justify-content: flex-end; gap: 4px;">
               ${r.status === 'Pending' ? `
                 <button class="btn-secondary btn-sm" onclick="updateTableResStatus('${r.code}', 'Confirmed')">Confirm</button>
+                <button class="btn-ghost btn-sm" style="color:var(--bad);" onclick="updateTableResStatus('${r.code}', 'Cancelled')">Cancel</button>
               ` : ''}
               ${r.status === 'Confirmed' ? `
                 <button class="btn btn-sm" onclick="openSeatResModal('${r.code}')">Seat at Table</button>
+                <button class="btn-ghost btn-sm" style="color:var(--bad);" onclick="updateTableResStatus('${r.code}', 'No-show')">No-show</button>
+                <button class="btn-ghost btn-sm" style="color:var(--bad);" onclick="updateTableResStatus('${r.code}', 'Cancelled')">Cancel</button>
               ` : ''}
               ${r.status === 'Seated' ? `
-                <button class="btn-secondary btn-sm" onclick="updateTableResStatus('${r.code}', 'Completed')">Complete</button>
-              ` : ''}
-              ${r.status === 'Pending' || r.status === 'Confirmed' ? `
-                <button class="btn-ghost btn-sm" style="color:var(--bad);" onclick="updateTableResStatus('${r.code}', 'Cancelled')">Cancel</button>
+                <button class="btn-secondary btn-sm" onclick="completeTableReservation('${r.code}')">Complete &amp; Clear</button>
               ` : ''}
             </div>
           </td>
@@ -272,8 +338,39 @@
 
     item.status = status;
     Data.saveTableRes(list);
+
+    // If cancelled or no-show, release table if assigned
+    if ((status === 'Cancelled' || status === 'No-show') && (item.tableNum || item.table)) {
+      const tNum = item.tableNum || item.table;
+      const tables = Data.getTables();
+      const t = tables.find(x => x.num === tNum || x.id === tNum);
+      if (t && t.st === 'Reserved') {
+        t.st = 'Free';
+        t.status = 'Free';
+        Data.saveTables(tables);
+      }
+    }
+
     Data.audit('Table Reservation', 'tableRes', code, `Reservation ${code} for ${item.guestName || item.guest} marked as ${status}`);
     toast(`Booking ${code} marked as ${status}`, 'ok');
+    renderApp();
+  };
+
+  window.completeTableReservation = function (code) {
+    const list = Data.getTableRes();
+    const item = list.find(r => r.code === code);
+    if (!item) return;
+
+    item.status = 'Completed';
+    Data.saveTableRes(list);
+
+    const tNum = item.tableNum || item.table;
+    if (tNum) {
+      setTableStatus(tNum, 'Needs cleaning');
+    }
+
+    Data.audit('Table Reservation Completed', 'tableRes', code, `Completed dining for ${item.guestName || item.guest}`);
+    toast(`Reservation ${code} completed. Table ${tNum || ''} marked for cleaning.`, 'ok');
     renderApp();
   };
 

@@ -110,8 +110,8 @@
         </div>
         <div class="stat-card kpi-card">
           <div class="stat-card-label">In-House Guests</div>
-          <div class="stat-card-num">${occupiedCount}</div>
-          <div class="stat-card-sub">${totalRooms ? Math.round((occupiedCount / totalRooms) * 100) : 0}% room occupancy</div>
+          <div class="stat-card-num">${inHouseGuestCount}</div>
+          <div class="stat-card-sub">${occupiedCount} rooms occupied (${totalRooms ? Math.round((occupiedCount / totalRooms) * 100) : 0}% occ)</div>
         </div>
         <div class="stat-card kpi-card">
           <div class="stat-card-label">Dining Sales Today</div>
@@ -337,7 +337,7 @@
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const iso = d.toISOString().split('T')[0];
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const dayLabel = `${dayNames[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
         days.push({ iso, label: dayLabel });
       }

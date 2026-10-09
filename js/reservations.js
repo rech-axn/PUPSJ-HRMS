@@ -721,7 +721,7 @@
         if (confirm(`Cancel reservation ${r.c} for ${r.g}?`)) {
           const resCancel = Data.cancelReservation(r.c, 'Staff');
           if (resCancel.success) {
-            toast(`Reservation ${r.c} cancelled. ${resCancel.fee > 0 ? 'Cancellation fee retained: ' + peso(resCancel.fee) : 'Deposit refunded.'}`, 'ok');
+            toast(`Reservation ${r.c} cancelled. ${(resCancel.retainedFee || resCancel.fee || 0) > 0 ? 'Cancellation fee retained: ' + peso(resCancel.retainedFee || resCancel.fee) : 'Deposit refunded.'}`, 'ok');
             closeModal();
             renderApp();
           } else {
@@ -743,11 +743,34 @@
       <form id="staffNewResForm" style="font-size: 13px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
           <div class="field">
+            <label>Booking Source *</label>
+            <select id="newResSource">
+              <option value="Staff-assisted">Staff-assisted (Advance)</option>
+              <option value="Walk-in">Walk-in (Front Desk)</option>
+            </select>
+          </div>
+          <div class="field">
             <label>Guest Full Name *</label>
             <input type="text" id="newResGuest" value="${esc(prefills.guest || '')}" required placeholder="e.g. Maria Santos">
           </div>
           <div class="field">
-            <label>Contact Phone</label>
+            <label>Contact Phone *</label>
+            <input type="tel" id="newResPhone" value="${esc(prefills.phone || '')}" placeholder="0917-000-0000">
+          </div>
+          <div class="field">
+            <label>Gov ID Type (Required for Walk-in)</label>
+            <select id="newResIdType">
+              <option value="Driver's License">Driver's License</option>
+              <option value="Passport">Passport</option>
+              <option value="UMID">UMID</option>
+              <option value="National ID">National ID</option>
+              <option value="Company ID">Company ID</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Gov ID Number</label>
+            <input type="text" id="newResIdNumber" placeholder="e.g. N01-12-345678">
+          </div>
             <input type="tel" id="newResPhone" value="${esc(prefills.phone || '')}" placeholder="0917-000-0000">
           </div>
           <div class="field">

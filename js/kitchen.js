@@ -139,9 +139,10 @@
           </div>
 
           <div style="margin: 12px 0; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); padding: 8px 0; display: flex; flex-direction: column; gap: 6px;">
-            ${(o.lines || []).map(l => `
+            ${((o.lines || []).filter(l => stationFilter === 'all' || (menuMap[l.id] || l.station || 'Kitchen') === stationFilter)).map(l => `
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
                 <span style="font-weight: 600;">${l.qty}&times; ${esc(l.name)}</span>
+                <span class="text-xs text-secondary">${esc(menuMap[l.id] || l.station || 'Kitchen')}</span>
               </div>
             `).join('')}
           </div>
@@ -173,7 +174,23 @@
   }
 
   function updateOrderTimers() {
-    renderApp();
+    const badges = document.querySelectorAll('[data-ticket-time]');
+    badges.forEach(badge => {
+      const createdStr = badge.getAttribute('data-ticket-time');
+      if (!createdStr) return;
+      const ageMins = getOrderAgeMinutes(createdStr);
+      badge.textContent = ageMins + 'm ago';
+
+      // Color coding: <10m neutral, 10-20m warn/amber, >20m red/bad
+      badge.className = 'pill';
+      if (ageMins >= 20) {
+        badge.classList.add('pill--bad');
+      } else if (ageMins >= 10) {
+        badge.classList.add('pill--warn');
+      } else {
+        badge.classList.add('pill--muted');
+      }
+    });
   }
 
   window.advanceKitchenTicket = function (orderCode, nextStatus) {

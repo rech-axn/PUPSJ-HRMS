@@ -8,52 +8,44 @@
 (function () {
   // ─── 1. Auth Guard & RBAC Matrix ───
   let staffSession = typeof Data !== 'undefined' ? Data.getStaffSession() : null;
+  const guestSession = typeof Data !== 'undefined' ? Data.getGuestSession() : null;
   const isAuthPage = location.pathname.includes('guest-login.html');
 
-  if (!staffSession && !isAuthPage) {
-    // If accessing staff management pages without an explicit session,
-    // automatically grant Manager session (Juan Santos, manager@pupsj.edu.ph)
-    // for seamless mock defense evaluation and paired testing.
-    const defaultManager = (typeof Data !== 'undefined' && Data.findStaffByEmail) ? (Data.findStaffByEmail('manager@pupsj.edu.ph') || Data.findStaffByEmail('admin@pupsj.edu.ph')) : null;
-    staffSession = {
-      id: defaultManager ? defaultManager.id : 'EMP-001',
-      name: defaultManager ? defaultManager.name : 'Juan Santos',
-      email: defaultManager ? defaultManager.email : 'manager@pupsj.edu.ph',
-      role: 'Manager',
-      shift: 'Morning'
-    };
-    if (typeof Data !== 'undefined' && Data.setStaffSession) {
-      Data.setStaffSession(staffSession);
-    }
+  // Guard Case A: Unauthenticated Visitor -> Safe redirect to login with ?next=
+  if (!staffSession && !guestSession && !isAuthPage) {
+    const curPath = location.pathname.split('/').pop() || 'dashboard.html';
+    const safeNext = typeof validateReturnUrl === 'function' ? validateReturnUrl(curPath) : curPath;
+    window.location.replace('../auth/guest-login.html?next=' + encodeURIComponent(safeNext));
+    return;
   }
 
-  // Current page filename for active nav highlighting & access control
-  const curFile = location.pathname.split('/').pop() || 'dashboard.html';
-  const userRole = (staffSession && staffSession.role) || 'Manager';
-
-  // ─── Role-Based Access Control (RBAC) Matrix ───
-  const ROLE_PERMISSIONS = {
-    'Manager': ['*'],
-    'Front Desk': [
-      'dashboard.html', 'reservations.html', 'guests.html', 'payments.html',
-      'messages.html', 'inquiries.html', 'feedback.html', 'housekeeping.html',
-      'rooms.html', 'tables.html'
-    ],
-    'Housekeeping': ['dashboard.html', 'housekeeping.html'],
-    'Maintenance': ['dashboard.html', 'maintenance.html'],
-    'Kitchen': ['dashboard.html', 'kitchen.html', 'orders.html', 'tables.html', 'menu.html'],
-    'Security': ['dashboard.html']
-  };
-
-  const isPermitted = (filename) => {
-    const perms = ROLE_PERMISSIONS[userRole] || ['dashboard.html'];
-    return perms.includes('*') || perms.includes(filename);
-  };
-
-  const isCurrentPageAllowed = isPermitted(curFile);
-  if (!isCurrentPageAllowed) {
+  // Guard Case B: Guest attempting to access Admin pages -> Access Denied card
+  if (!staffSession && guestSession && !isAuthPage) {
     window.__PUPSJ_ACCESS_DENIED = true;
+    document.addEventListener('DOMContentLoaded', () => {
+      const mainApp = document.querySelector('.staff-content') || document.body;
+      if (mainApp) {
+        mainApp.innerHTML = `
+          <div class="card access-denied" style="max-width: 520px; margin: 80px auto; text-align: center; padding: 40px; box-shadow: var(--shadow-md, 0 4px 12px rgba(30, 35, 43, 0.08));">
+            <div style="font-size: 48px; margin-bottom: 12px;">🔒</div>
+            <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 28px; margin-bottom: 8px;">Access Denied</h2>
+            <p class="text-sm" style="color: var(--text-secondary); margin-bottom: 24px;">
+              Superadmin privileges required. You are currently signed in as a registered <b>Guest</b> (<em>${esc(guestSession.name)}</em>).
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+              <a href="../guest/guest-portal.html" class="btn">Return to Guest Portal</a>
+              <button class="btn-secondary" onclick="Data.clearGuestSession(); location.href='../auth/guest-login.html';">Switch Account</button>
+            </div>
+          </div>
+        `;
+      }
+    });
+    return;
   }
+
+  // Current page filename for active nav highlighting
+  const curFile = location.pathname.split('/').pop() || 'dashboard.html';
+  const userRole = 'Superadmin';
 
   // ─── Sidebar Navigation Structure ───
   const NAV_SECTIONS = [

@@ -48,6 +48,8 @@
 
   /* Subtle single elevation shadow for floating overlays */
   --shadow: 0 1px 2px rgba(30, 35, 43, 0.06);
+  --shadow-sm: 0 1px 3px rgba(30, 35, 43, 0.05), 0 1px 2px rgba(30, 35, 43, 0.03);
+  --shadow-md: 0 4px 12px rgba(30, 35, 43, 0.08), 0 2px 4px rgba(30, 35, 43, 0.04);
   --shadow-dropdown: 0 4px 12px rgba(30, 35, 43, 0.08);
 
   /* Layout measurements */
@@ -270,6 +272,14 @@ small, .text-sm {
 .btn-secondary:hover {
   background-color: var(--surface-2);
   border-color: var(--ink-3);
+}
+
+.btn-secondary.active,
+.btn-secondary.is-active {
+  background: var(--gold);
+  color: #ffffff;
+  border-color: var(--gold);
+  font-weight: 600;
 }
 
 /* Ghost Button: transparent */
@@ -1806,4 +1816,10 @@ tbody tr:hover {
     color: #000000 !important;
     text-decoration: none !important;
   }
+}
+
+/* Fix mobile drawer backdrop pointer-events swallowing clicks */
+.modal-backdrop:not(.show),
+.drawer-backdrop:not(.show) {
+  pointer-events: none !important;
 }

@@ -758,75 +758,34 @@ const Data = {
 
   // ─── Unique ID Generator (Collision-Free) ───
   nextId(prefix) {
-    if (prefix === 'HTL-') {
-      const list = this.getReservations();
-      const maxNum = Math.max(2040, ...list.map(r => {
-        const m = /^HTL-(\d+)$/.exec(r.c);
-        return m ? Number(m[1]) : 0;
-      }));
-      return 'HTL-' + (maxNum + 1);
-    }
-    if (prefix === 'MNT-') {
-      const list = this.getMaintenance();
-      const maxNum = Math.max(100, ...list.map(m => {
-        const match = /^(?:MNT|MX)-(\d+)$/.exec(m.id);
-        return match ? Number(match[1]) : 0;
-      }));
-      return 'MNT-' + (maxNum + 1);
-    }
-    if (prefix === 'ORD-') {
-      const list = this.getOrders();
-      const maxNum = Math.max(1000, ...list.map(o => {
-        const match = /^ORD-(\d+)$/.exec(o.code);
-        return match ? Number(match[1]) : 0;
-      }));
-      return 'ORD-' + (maxNum + 1);
-    }
-    if (prefix === 'TBL-') {
-      const list = this.getTableRes();
-      const maxNum = Math.max(100, ...list.map(t => {
-        const match = /^TBL-(\d+)$/.exec(t.code);
-        return match ? Number(match[1]) : 0;
-      }));
-      return 'TBL-' + (maxNum + 1);
-    }
-    if (prefix === 'INQ-') {
-      const list = this.getInquiries();
-      const maxNum = Math.max(1000, ...list.map(i => {
-        const match = /^INQ-(\d+)$/.exec(i.ref || i.id);
-        return match ? Number(match[1]) : 0;
-      }));
-      return 'INQ-' + (maxNum + 1);
-    }
-    if (prefix === 'MSG-') {
-      const list = this.getThreads();
-      const maxNum = Math.max(100, ...list.map(t => {
-        const match = /^MSG-(\d+)$/.exec(t.id);
-        return match ? Number(match[1]) : 0;
-      }));
-      return 'MSG-' + (maxNum + 1);
-    }
-    if (prefix === 'HKR-') {
-      const list = this.getHkRequests();
-      const maxNum = Math.max(100, ...list.map(h => {
-        const match = /^HKR-(\d+)$/.exec(h.id);
-        return match ? Number(match[1]) : 0;
-      }));
-      return 'HKR-' + (maxNum + 1);
-    }
-    if (prefix === 'FB-') {
-      const list = this.getFeedback();
-      const maxNum = Math.max(100, ...list.map(f => {
-        const match = /^FB-(\d+)$/.exec(f.id);
-        return match ? Number(match[1]) : 0;
-      }));
-      return 'FB-' + (maxNum + 1);
-    }
-    if (prefix === 'OR-') {
-      return this.nextOR();
-    }
-    return prefix + Date.now();
+    const cleanPrefix = (prefix || '').replace(/[^A-Z]/g, '');
+    const counter = this.nextSequence(cleanPrefix || 'GEN', 1000);
+    return (prefix || 'ID-') + counter;
   },
+  
+  nextSequence(prefix, start = 1000) {
+    const seqs = store.get('_sequences', {});
+    const cur = Number(seqs[prefix] || start);
+    const nextVal = cur + 1;
+    seqs[prefix] = nextVal;
+    store.set('_sequences', seqs);
+    return nextVal;
+  },
+
+  nextOR() {
+    const seq = this.nextSequence('OR', 50100);
+    return 'OR-' + String(seq).padStart(5, '0');
+  },
+
+  getPayments() {
+    return store.get('payments', []);
+  },
+
+  savePayments(list) {
+    store.set('payments', list);
+    this.emit('Payment', 'save', list.length);
+  },
+
 
   nextOR() {
     const res = this.getReservations();
@@ -2529,3 +2488,16 @@ if (typeof window !== 'undefined') {
 
 // Auto-initialize schema on load
 Data.init();
+
+
+// Cross-Tab Reactivity Listener
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('storage', function(e) {
+    if (e.key && e.key.startsWith('pupsj.')) {
+      const entity = e.key.replace('pupsj.', '');
+      window.dispatchEvent(new CustomEvent('pupsj:data-change', {
+        detail: { entity, action: 'storage-sync', external: true, time: Date.now() }
+      }));
+    }
+  });
+}

@@ -174,12 +174,12 @@ const peso = amt => {
 // Computes itemized tax components (12% VAT + 10% Service Charge inclusive)
 const taxBreakdown = grossAmount => {
   const gross = Math.round(+grossAmount || 0);
-  // Total factor = 1 + (vatPct + svcPct) / 100 = 1.22
-  const factor = 1 + (CONFIG.tax.vatPct + CONFIG.tax.svcPct) / 100;
+  // BIR standard factor: Net * 1.10 (Service Charge) * 1.12 (VAT) = Net * 1.232
+  const factor = 1.232;
   const net = Math.round(gross / factor);
-  const vat = Math.round(net * (CONFIG.tax.vatPct / 100));
-  const svc = gross - net - vat;
-  return { net, vat, svc, total: gross };
+  const svc = Math.round(net * 0.10);
+  const vat = gross - net - svc;
+  return { net, vat, svc, total: gross, factor };
 };
 
 // ─── Icon & Image Placeholder Helpers ───
@@ -208,10 +208,56 @@ const store = {
       localStorage.setItem('pupsj.' + key, JSON.stringify(value));
     } catch (e) {
       console.error('Storage write failed for', key, e);
+      if (typeof toast === 'function') {
+        toast('Storage quota exceeded. Please archive past records.', 'warn');
+      }
     }
   },
   remove(key) {
-    localStorage.removeItem('pupsj.' + key);
+    try {
+      localStorage.removeItem('pupsj.' + key);
+    } catch (e) {
+      console.warn('Storage remove failed for', key, e);
+    }
+  },
+  transaction(fn) {
+    const snapshot = {};
+    const touchedKeys = new Set();
+    const originalSet = this.set.bind(this);
+    const originalRemove = this.remove.bind(this);
+
+    this.set = (key, val) => {
+      if (!touchedKeys.has(key)) {
+        snapshot[key] = this.get(key, null);
+        touchedKeys.add(key);
+      }
+      originalSet(key, val);
+    };
+    this.remove = (key) => {
+      if (!touchedKeys.has(key)) {
+        snapshot[key] = this.get(key, null);
+        touchedKeys.add(key);
+      }
+      originalRemove(key);
+    };
+
+    try {
+      const res = fn();
+      return res;
+    } catch (err) {
+      console.error('Transaction rollback triggered:', err);
+      for (const key of touchedKeys) {
+        if (snapshot[key] === null) {
+          originalRemove(key);
+        } else {
+          originalSet(key, snapshot[key]);
+        }
+      }
+      throw err;
+    } finally {
+      this.set = originalSet;
+      this.remove = originalRemove;
+    }
   }
 };
 
@@ -534,21 +580,30 @@ const WHITELISTED_PAGES = [
   'dashboard.html', 'reservations.html', 'orders.html', 'kitchen.html',
   'tables.html', 'housekeeping.html', 'maintenance.html', 'payments.html',
   'reports.html', 'rooms.html', 'roomtypes.html', 'promotions.html',
-  'employees.html', 'audit.html', 'messages.html', 'inquiries.html', 'feedback.html'
+  'employees.html', 'audit.html', 'menu-management.html', 'settings.html', 'messages.html', 'inquiries.html', 'feedback.html'
 ];
 
 const validateReturnUrl = (url, defaultTarget = '../guest/guest-portal.html') => {
+  if (typeof PUPSJ_Validators !== 'undefined' && PUPSJ_Validators.validateReturnUrl) {
+    return PUPSJ_Validators.validateReturnUrl(url, defaultTarget);
+  }
   if (!url || typeof url !== 'string') return defaultTarget;
   const clean = url.trim();
-  // Reject external protocols, protocol-relative URLs, javascript:
-  if (/^(https?:|\/\/|javascript:|data:)/i.test(clean)) return defaultTarget;
-
-  // Extract base filename without query string or hash
-  const pathOnly = clean.split('?')[0].split('#')[0];
-  const filename = pathOnly.split('/').pop();
-
-  if (WHITELISTED_PAGES.includes(filename)) {
-    return clean;
+  if (clean.includes('\\')) return defaultTarget;
+  if (/^(https?:|file:|javascript:|data:|blob:)/i.test(clean) || clean.startsWith('//')) return defaultTarget;
+  try {
+    const URLImpl = typeof URL !== 'undefined' ? URL : (typeof globalThis !== 'undefined' ? globalThis.URL : null);
+    if (URLImpl) {
+      const base = typeof location !== 'undefined' ? location.href : 'http://localhost/pages/main/home.html';
+      const resolved = new URLImpl(clean, base);
+      const filename = resolved.pathname.replace(/\\/g, '/').split('/').pop() || '';
+      if (WHITELISTED_PAGES.includes(filename)) return clean;
+    } else {
+      const filename = clean.split('?')[0].split('#')[0].split('/').pop();
+      if (WHITELISTED_PAGES.includes(filename)) return clean;
+    }
+  } catch (e) {
+    return defaultTarget;
   }
   return defaultTarget;
 };

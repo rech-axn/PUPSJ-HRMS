@@ -1663,6 +1663,26 @@ const Data = {
     return { success: true, profile: newAcc };
   },
 
+    saveGuest(data) {
+    if (!data) return null;
+    const name = (data.name || '').trim();
+    if (!name) return { success: false, error: 'Guest name is required.' };
+    const accounts = this.getGuestAccounts();
+    const existing = accounts.find(a => (a.name && a.name.toLowerCase() === name.toLowerCase()) || (data.email && a.email && a.email.toLowerCase() === data.email.trim().toLowerCase()));
+    if (existing) {
+      if (data.name) existing.name = data.name.trim();
+      if (data.phone) existing.phone = data.phone.trim();
+      if (data.email) existing.email = data.email.trim();
+      if (data.address !== undefined) existing.address = data.address;
+      if (data.notes !== undefined) existing.notes = data.notes;
+      if (data.preferences !== undefined) existing.preferences = data.preferences;
+      this.saveGuestAccounts(accounts);
+      this.audit('Saved guest profile', 'GuestProfile', existing.name, 'Updated guest details in CRM');
+      return { success: true, profile: existing };
+    }
+    return this.createGuestProfile(data);
+  },
+
   updateGuestProfile(originalName, updates) {
     const accounts = this.getGuestAccounts();
     const acc = accounts.find(a => a.name.toLowerCase() === originalName.toLowerCase());

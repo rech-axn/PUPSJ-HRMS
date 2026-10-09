@@ -206,6 +206,25 @@
     `;
   }
 
+
+  function hasActiveStay() {
+    if (typeof Data === 'undefined') return false;
+    const guestSession = Data.getGuestSession();
+    if (!guestSession) return false;
+    const resList = Data.getReservations();
+    const email = (guestSession.email || '').toLowerCase();
+    const phone = guestSession.phone || '';
+    const guestId = guestSession.guestId || '';
+    return resList.some(r => {
+      const isGuest = (r.email && r.email.toLowerCase() === email) ||
+                      ((r.ph || r.phone) && (r.ph || r.phone) === phone) ||
+                      (r.guestId && r.guestId === guestId) ||
+                      (r.g && r.g.toLowerCase() === (guestSession.name || '').toLowerCase());
+      const isCheckedIn = (r.st === 'Checked-in' || r.s === 'Checked-in');
+      return isGuest && isCheckedIn;
+    });
+  }
+
   // ─── 3. Floating Digital Concierge Widget ───
   function initConcierge() {
     if ($('conciergeWidget')) return;
@@ -271,7 +290,12 @@
     // FAQ Instant Answers
     const FAQ_RESPONSES = {
       hours: `Check-in starts at <b>${CONFIG.hours.checkIn}</b> and check-out is by <b>${CONFIG.hours.checkOut}</b>. Complimentary late check-out is subject to room availability upon request at the front desk.`,
-      wifi: `Complimentary high-speed Wi-Fi is available across all rooms and facilities.<br>Network: <b>${CONFIG.wifi.network}</b><br>Password: <b>${CONFIG.wifi.password}</b>`,
+      get wifi() {
+        if (hasActiveStay()) {
+          return `Complimentary high-speed Wi-Fi is active for your in-house stay.<br>Network: <b>${CONFIG.wifi.network}</b><br>Password: <b>${CONFIG.wifi.password}</b>`;
+        }
+        return 'High-speed guest Wi-Fi credentials are provided exclusively to in-house guests upon check-in registration at the Front Desk.';
+      },
       dining: `PUPSJ Restaurant &amp; Lounge is open daily from <b>${CONFIG.hours.restaurant}</b>. Breakfast: ${CONFIG.hours.breakfast} · Lunch: ${CONFIG.hours.lunch} · Dinner: ${CONFIG.hours.dinner}. In-room dining can be ordered via your Guest Portal.`,
       deposit: `A <b>${CONFIG.depositPct}%</b> deposit is required to confirm room reservations. Free cancellation is permitted up to <b>${CONFIG.freeCancelDays} days</b> before arrival. Later cancellations retain the first night room rate.`,
       location: `Our address is <b>${CONFIG.address}</b>. Complimentary 24-hour valet parking and secure basement guest parking are available for all hotel guests and restaurant diners.`
@@ -334,7 +358,7 @@
 
         if (typeof Data !== 'undefined') {
           const threads = Data.getThreads();
-          const existingThread = threads.find(t => t.status === 'Open' && (t.contact === contact || (guestSession && t.guestName.toLowerCase() === guestSession.name.toLowerCase())));
+          const existingThread = threads.find(t => t.status === 'Open' && (t.contact === contact || (guestSession && t.guestName && t.guestName.toLowerCase() === guestSession.name.toLowerCase())));
           if (existingThread) {
             Data.replyThread(existingThread.id, guestName, txt, 'guest');
           } else {

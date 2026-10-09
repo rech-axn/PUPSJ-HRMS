@@ -75,20 +75,17 @@
 
         <!-- Demo Accounts Box -->
         <div class="demo-accounts-box" id="demoAccountsBox">
-          <div style="font-weight: 600; margin-bottom: 6px; color: var(--gold-ink);">Demo Accounts (for demonstration only):</div>
+          <div style="font-weight: 600; margin-bottom: 6px; color: var(--gold-ink);">Demo Accounts (Two-Role Model):</div>
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <button type="button" class="btn-secondary btn-sm" style="text-align: left; justify-content: flex-start;" id="btnDemoAdmin">
-              <b>Manager:</b> admin@pupsj.edu.ph (admin123)
-            </button>
-            <button type="button" class="btn-secondary btn-sm" style="text-align: left; justify-content: flex-start;" id="btnDemoFrontDesk">
-              <b>Front Desk:</b> maria@pupsj.edu.ph (frontdesk123)
+              <b>Superadmin:</b> admin@pupsj.edu.ph (admin123)
             </button>
             <button type="button" class="btn-secondary btn-sm" style="text-align: left; justify-content: flex-start;" id="btnDemoGuest">
-              <b>Guest:</b> ana.delacruz@example.com (password123)
+              <b>Registered Guest:</b> ana.delacruz@example.com (password123)
             </button>
           </div>
           <div class="text-xs text-muted" style="margin-top: 8px; font-size: 11px;">
-            Academic Prototype: Passwords and sessions run client-side for standalone defense demonstration. Production systems implement server-side bcrypt hashing, HTTP-only secure cookies, and RBAC middleware.
+            Role-Based Access: Superadmin accesses operational management modules; Guest accesses portal self-service.
           </div>
         </div>
       </div>

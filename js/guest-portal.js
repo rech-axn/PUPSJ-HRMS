@@ -23,6 +23,260 @@
     return;
   }
 
+  
+  // ─── Tab: My Table Reservations ───
+  function renderTableReservations() {
+    const container = $('tabTableReservations');
+    if (!container) return;
+
+    const allTables = store.get('tableReservations', []);
+    const myName = (guestSession.name || '').toLowerCase();
+    const myPhone = guestSession.phone || '';
+    const myEmail = (guestSession.email || '').toLowerCase();
+
+    const myBookings = allTables.filter(t => {
+      const g = (t.guestName || t.name || '').toLowerCase();
+      const ph = t.phone || '';
+      const em = (t.email || '').toLowerCase();
+      return (myName && g.includes(myName)) || (myPhone && ph === myPhone) || (myEmail && em === myEmail);
+    }).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+
+    container.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 24px; margin: 0 0 4px 0;">Restaurant Table Reservations</h2>
+          <p class="text-sm text-secondary" style="margin: 0;">View your dining reservations at PUPSJ Restaurant &amp; Lounge.</p>
+        </div>
+        <a href="../main/menu.html#reserve-table" class="btn btn-sm">
+          <span class="ic" data-icon="plus">[ICON: plus]</span> Reserve a Table
+        </a>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Booking Ref</th>
+                <th>Dining Date &amp; Time</th>
+                <th>Area / Table</th>
+                <th>Party Size</th>
+                <th>Status</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${myBookings.map(b => `
+                <tr>
+                  <td><b>${esc(b.code || b.id || 'TRS-1001')}</b></td>
+                  <td>${fmtDate(b.date)} at <b>${esc(b.time)}</b></td>
+                  <td>${esc(b.area || 'Main Dining')} ${b.table ? '(Table ' + b.table + ')' : ''}</td>
+                  <td>${b.partySize || b.guests || 2} guest(s)</td>
+                  <td>
+                    <span class="pill ${b.status === 'Confirmed' ? 'pill--ok' : b.status === 'Cancelled' ? 'pill--bad' : 'pill--info'}">
+                      ${esc(b.status || 'Confirmed')}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    ${b.status === 'Confirmed' ? `
+                      <button type="button" class="btn-ghost btn-sm" style="color: var(--bad);" onclick="cancelTableBooking('${b.code || b.id}')">
+                        Cancel
+                      </button>
+                    ` : '<span class="text-xs text-muted">—</span>'}
+                  </td>
+                </tr>
+              `).join('')}
+              ${myBookings.length === 0 ? `
+                <tr>
+                  <td colspan="6" class="text-center text-muted" style="padding: 32px;">
+                    No dining reservations found. Enjoy breakfast, lunch, or dinner at PUPSJ Restaurant.
+                  </td>
+                </tr>
+              ` : ''}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  window.cancelTableBooking = async function (code) {
+    const ok = await confirmDialog(`Are you sure you want to cancel table reservation ${code}?`, 'Cancel Table Reservation', { danger: true });
+    if (!ok) return;
+
+    const allTables = store.get('tableReservations', []);
+    const b = allTables.find(t => (t.code || t.id) === code);
+    if (b) {
+      b.status = 'Cancelled';
+      store.set('tableReservations', allTables);
+      Data.audit('Cancel Table Reservation', 'Table', code, 'Cancelled by guest');
+      toast(`Reservation ${code} cancelled.`, 'info');
+      renderTableReservations();
+    }
+  };
+
+  // ─── Tab: My Orders (POS & In-Room) ───
+  function renderDiningOrders() {
+    const container = $('tabDiningOrders');
+    if (!container) return;
+
+    const allOrders = Data.getOrders();
+    const activeRes = getActiveReservation();
+    const roomTarget = activeRes ? `Room ${activeRes.n}` : null;
+
+    const myOrders = allOrders.filter(o => {
+      if (roomTarget && o.target === roomTarget) return true;
+      if (activeRes && o.resCode === activeRes.c) return true;
+      return false;
+    });
+
+    container.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 24px; margin: 0 0 4px 0;">In-Room Dining &amp; Orders</h2>
+          <p class="text-sm text-secondary" style="margin: 0;">Live tracking of kitchen preparation and meal delivery to your room.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        ${myOrders.map(o => {
+          let stepProgress = 1;
+          if (o.status === 'Preparing') stepProgress = 2;
+          if (o.status === 'Ready') stepProgress = 3;
+          if (o.status === 'Served' || o.payStatus === 'Paid') stepProgress = 4;
+
+          return `
+            <div class="card" style="padding: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <div style="font-size: 11px; text-transform: uppercase; color: var(--gold-ink); font-weight: 600;">${esc(o.type || o.source || 'In-room Dining')}</div>
+                  <h3 style="margin: 2px 0 0 0; font-size: 18px;">Order ${esc(o.code)}</h3>
+                  <div class="text-xs text-muted" style="margin-top: 2px;">Placed at ${esc(o.time || '12:00')} &middot; Destination: <b>${esc(o.target)}</b></div>
+                </div>
+                <div style="text-align: right;">
+                  <span class="pill ${o.status === 'Served' ? 'pill--ok' : o.status === 'Preparing' ? 'pill--warn' : 'pill--info'}">
+                    ${esc(o.status)}
+                  </span>
+                  <div style="font-weight: 600; font-size: 15px; margin-top: 4px;">${peso(o.subtotal || o.total)}</div>
+                </div>
+              </div>
+
+              <!-- Order Preparation Status Tracker -->
+              <div style="background: var(--surface-2); border-radius: 4px; padding: 12px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px;">
+                  <span style="color: ${stepProgress >= 1 ? 'var(--gold-ink)' : 'var(--muted)'};">1. Order Placed</span>
+                  <span style="color: ${stepProgress >= 2 ? 'var(--gold-ink)' : 'var(--muted)'};">2. Kitchen Preparing</span>
+                  <span style="color: ${stepProgress >= 3 ? 'var(--gold-ink)' : 'var(--muted)'};">3. Order Ready</span>
+                  <span style="color: ${stepProgress >= 4 ? 'var(--ok)' : 'var(--muted)'};">4. Delivered &amp; Served</span>
+                </div>
+                <div style="height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;">
+                  <div style="height: 100%; width: ${(stepProgress / 4) * 100}%; background: ${stepProgress === 4 ? 'var(--ok)' : 'var(--gold)'}; transition: width 0.3s ease;"></div>
+                </div>
+              </div>
+
+              <!-- Ordered Dishes -->
+              <div style="font-size: 13px;">
+                <b style="font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Items Ordered:</b>
+                <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                  ${(o.lines || o.items || []).map(item => `
+                    <div style="display: flex; justify-content: space-between;">
+                      <span>${item.qty}x ${esc(item.name)}</span>
+                      <span>${peso(item.unitPrice ? item.unitPrice * item.qty : item.price * item.qty)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+        ${myOrders.length === 0 ? `
+          <div class="card" style="padding: 40px; text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 8px;">🍽️</div>
+            <h3>No Active Dining Orders</h3>
+            <p class="text-sm text-secondary">You haven't ordered room service or dining for this stay yet.</p>
+            ${activeRes ? `
+              <button class="btn btn-sm" onclick="switchTab('stay'); setTimeout(() => $('btnGpOrderDining')?.click(), 200);">
+                Order In-Room Dining &rarr;
+              </button>
+            ` : ''}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // ─── Tab: Service Requests ───
+  function renderServiceRequests() {
+    const container = $('tabServiceRequests');
+    if (!container) return;
+
+    const activeRes = getActiveReservation();
+    const roomNum = activeRes ? Number(activeRes.n) : 0;
+
+    const allHk = Data.getHKRequests ? Data.getHKRequests() : store.get('hkRequests', []);
+    const allMx = Data.getMaintenance();
+
+    const myHk = allHk.filter(r => roomNum && Number(r.room || r.n) === roomNum);
+    const myMx = allMx.filter(m => roomNum && Number(m.room) === roomNum);
+
+    container.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 24px; margin: 0 0 4px 0;">Guest Service Requests</h2>
+          <p class="text-sm text-secondary" style="margin: 0;">Track housekeeping amenities and facilities maintenance for your room.</p>
+        </div>
+        ${activeRes ? `
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-sm" onclick="switchTab('stay'); setTimeout(() => $('btnGpHousekeeping')?.click(), 200);">
+              <span class="ic" data-icon="plus">[ICON: plus]</span> Housekeeping Request
+            </button>
+            <button class="btn-secondary btn-sm" onclick="switchTab('stay'); setTimeout(() => $('btnGpMaintenance')?.click(), 200);">
+              <span class="ic" data-icon="wrench">[ICON: wrench]</span> Report Issue
+            </button>
+          </div>
+        ` : ''}
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Housekeeping Requests -->
+        <div class="card" style="padding: 20px;">
+          <h3 style="font-size: 18px; margin: 0 0 12px 0;">Housekeeping Requests</h3>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${myHk.map(req => `
+              <div style="background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 12px; font-size: 13px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <b>${esc(req.item || req.service)}</b>
+                  <span class="pill ${req.status === 'Done' || req.status === 'Delivered' ? 'pill--ok' : 'pill--warn'}">${esc(req.status || 'Pending')}</span>
+                </div>
+                <div class="text-xs text-muted" style="margin-top: 4px;">${esc(req.notes || 'No special instructions')}</div>
+                <div class="text-xs text-secondary" style="margin-top: 4px;">Created: ${fmtDate(req.created || today())}</div>
+              </div>
+            `).join('')}
+            ${myHk.length === 0 ? '<p class="text-xs text-muted">No housekeeping requests submitted for this stay.</p>' : ''}
+          </div>
+        </div>
+
+        <!-- Maintenance Requests -->
+        <div class="card" style="padding: 20px;">
+          <h3 style="font-size: 18px; margin: 0 0 12px 0;">Facilities &amp; Maintenance Reports</h3>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${myMx.map(wo => `
+              <div style="background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 12px; font-size: 13px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <b>${esc(wo.title || wo.issue)}</b>
+                  <span class="pill ${wo.status === 'Resolved' ? 'pill--ok' : 'pill--warn'}">${esc(wo.status || 'Open')}</span>
+                </div>
+                <div class="text-xs text-muted" style="margin-top: 4px;">Priority: <b>${esc(wo.priority || 'Medium')}</b></div>
+                <div class="text-xs text-secondary" style="margin-top: 4px;">Ref: ${esc(wo.id)} &middot; Reported: ${fmtDate(wo.reportedDate || today())}</div>
+              </div>
+            `).join('')}
+            ${myMx.length === 0 ? '<p class="text-xs text-muted">No maintenance work orders reported for this stay.</p>' : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   // ─── Header Info ───
   if ($('gpWelcomeTitle')) {
     $('gpWelcomeTitle').textContent = `Welcome, ${esc(guestSession.name)}`;
@@ -492,6 +746,73 @@
       };
     }
 
+    
+    // Late Check-Out Request Flow
+    const lateCoBtn = $('btnGpLateCheckout');
+    if (lateCoBtn) {
+      lateCoBtn.onclick = () => {
+        showModal(
+          `Request Late Check-Out (Room ${res.n})`,
+          `
+          <div style="font-size: 13px;">
+            <p class="text-sm text-secondary" style="margin-bottom: 12px;">
+              Standard check-out is at 12:00 PM. Requests are subject to room turnover schedule and availability.
+            </p>
+            <div class="field" style="margin-bottom: 12px;">
+              <label for="lateCoTime">Requested Check-Out Time</label>
+              <select id="lateCoTime">
+                <option value="1:00 PM">1:00 PM (Complimentary Member Privilege)</option>
+                <option value="2:00 PM" selected>2:00 PM (Gold / Platinum Privilege)</option>
+                <option value="3:00 PM">3:00 PM (Late Departure - Subject to ₱500 fee)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="lateCoReason">Reason / Special Circumstance (Optional)</label>
+              <textarea id="lateCoReason" rows="2" placeholder="e.g. Afternoon flight from NAIA, late business meeting…"></textarea>
+            </div>
+          </div>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn" id="btnSubmitLateCo">Submit Request to Front Desk</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnSubmitLateCo').onclick = () => {
+                const time = modal.querySelector('#lateCoTime').value;
+                const reason = modal.querySelector('#lateCoReason').value.trim();
+
+                // Send request message thread to front desk
+                const threads = Data.getThreads();
+                const threadId = 'TH-LCO-' + Date.now().toString().slice(-4);
+                threads.unshift({
+                  id: threadId,
+                  guestName: res.g,
+                  subject: `Late Check-out Request: Room ${res.n} (${res.c})`,
+                  status: 'Open',
+                  unreadStaff: 1,
+                  unreadGuest: 0,
+                  updated: nowISO(),
+                  messages: [
+                    {
+                      from: 'Guest',
+                      sender: res.g,
+                      text: `Requesting late check-out until ${time} on departure date (${res.o || res.co}). ${reason ? 'Notes: ' + reason : ''}`,
+                      time: nowISO()
+                    }
+                  ]
+                });
+                Data.saveThreads(threads);
+                Data.audit('Late Check-Out Request', 'Reservation', res.c, `Requested departure until ${time}`);
+                closeModal();
+                toast('Late check-out request sent to the Front Desk for review.', 'ok');
+              };
+            }
+          }
+        );
+      };
+    }
+
     // 5. Express Check-out Flow
     const checkOutBtn = $('btnGpExpressCheckout');
     if (checkOutBtn) {
@@ -516,13 +837,17 @@
           {
             onOpen(modal) {
               modal.querySelector('#btnConfirmCheckout').onclick = () => {
-                res.st = 'Checked-out';
-                Data.syncPaymentStatus(res);
-                Data.setRoomHK(res.n, { s: 'Dirty', p: 'Urgent', a: 0 });
-                Data.updateReservation(res.c, res);
-                Data.audit('Guest express check-out', 'Reservation', res.c, `Checked out Room ${res.n}`);
+                const checkOutResult = (typeof ReservationService !== 'undefined')
+                  ? ReservationService.checkOut(res.c)
+                  : (typeof PUPSJ_Services !== 'undefined' ? PUPSJ_Services.ReservationService.checkOut(res.c) : null);
+
+                if (checkOutResult && !checkOutResult.ok) {
+                  toast(checkOutResult.error, 'bad');
+                  return;
+                }
+
                 closeModal();
-                toast('Check-out completed. Thank you for staying with us!');
+                toast('Express check-out completed. Thank you for staying with us!', 'ok');
                 renderCurrentStay();
               };
             }
@@ -1234,26 +1559,81 @@
 
     const form = $('profileEditForm');
     if (form) {
-      form.onsubmit = e => {
+      form.onsubmit = async e => {
         e.preventDefault();
-        prof.name = $('profName').value.trim();
-        prof.phone = $('profPhone').value.trim();
-        prof.email = $('profEmail').value.trim();
-        prof.address = $('profAddress').value.trim();
-        prof.bedPref = $('profBed').value;
-        prof.dietary = $('profDiet').value.trim();
+        const newName = $('profName').value.trim();
+        const newPhone = $('profPhone').value.trim();
+        const newEmail = $('profEmail').value.trim();
+        const newAddress = $('profAddress').value.trim();
+        const newBed = $('profBed').value;
+        const newDiet = $('profDiet').value.trim();
 
-        guestProfiles[emailKey] = prof;
+        if (!newName) {
+          toast('Please enter your full name.', 'warn');
+          return;
+        }
+
+        const oldEmail = guestSession.email || '';
+        const emailChanged = oldEmail && newEmail && (oldEmail.toLowerCase() !== newEmail.toLowerCase());
+
+        if (emailChanged) {
+          const ok = typeof confirmDialog === 'function'
+            ? await confirmDialog({
+                title: 'Change Sign-In Email Address?',
+                message: `Updating your email address to "${newEmail}" will update your account sign-in credentials. Are you sure you wish to continue?`,
+                confirmLabel: 'Update Email & Profile',
+                cancelLabel: 'Keep Current Email',
+                intent: 'primary'
+              })
+            : confirm(`Updating your email address to "${newEmail}" will update your account sign-in credentials. Continue?`);
+          if (!ok) return;
+        }
+
+        // 1. Update guestAccounts canonical store via Data.saveGuest
+        if (typeof Data !== 'undefined' && Data.saveGuest) {
+          Data.saveGuest({
+            name: newName,
+            phone: newPhone,
+            email: newEmail,
+            address: newAddress,
+            preferences: `${newBed} | ${newDiet}`,
+            notes: `Guest Portal profile self-update (${today()})`
+          });
+        }
+
+        // 2. Also update GuestService if available
+        if (typeof GuestService !== 'undefined' && GuestService.updateGuest) {
+          GuestService.updateGuest(oldEmail || newEmail, {
+            name: newName,
+            email: newEmail,
+            phone: newPhone
+          });
+        }
+
+        // 3. Update guestProfiles local storage mapping
+        prof.name = newName;
+        prof.phone = newPhone;
+        prof.email = newEmail;
+        prof.address = newAddress;
+        prof.bedPref = newBed;
+        prof.dietary = newDiet;
+
+        if (emailChanged) {
+          delete guestProfiles[emailKey];
+          guestProfiles[newEmail.toLowerCase()] = prof;
+        } else {
+          guestProfiles[emailKey] = prof;
+        }
         store.set('guestProfiles', guestProfiles, true);
 
-        // Update active session
-        guestSession.name = prof.name;
-        guestSession.email = prof.email;
-        guestSession.phone = prof.phone;
+        // 4. Update active guest session
+        guestSession.name = newName;
+        guestSession.email = newEmail;
+        guestSession.phone = newPhone;
         Data.setGuestSession(guestSession);
 
         isEditingProfile = false;
-        toast('Profile updated successfully.');
+        toast('Profile updated successfully.', 'ok');
         renderProfile();
       };
     }

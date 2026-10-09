@@ -72,6 +72,47 @@ const SafeCustomEvent = typeof CustomEvent !== 'undefined' ? CustomEvent : (type
       store.set('_lockouts', lockouts);
     },
 
+    registerGuest({ name, email, phone, password }) {
+      if (!name || !email || !password) {
+        return { ok: false, error: 'Name, email, and password are required.' };
+      }
+      const em = email.trim().toLowerCase();
+      const accounts = store.get('guestAccounts', []);
+      if (accounts.some(a => a.email.toLowerCase() === em)) {
+        return { ok: false, error: 'An account with this email address already exists.' };
+      }
+      const Crypto = getCrypto();
+      const salt = Crypto ? Crypto.generateSalt() : 'salt_' + Math.random().toString(36).slice(2);
+      const passwordHash = Crypto ? Crypto.hashPassword(password, salt) : password;
+
+      const guestId = Data.nextId('GST-');
+      const newAcc = {
+        guestId,
+        id: guestId,
+        name: name.trim(),
+        email: em,
+        phone: (phone || '').trim(),
+        salt,
+        passwordHash,
+        created: today()
+      };
+      accounts.push(newAcc);
+      store.set('guestAccounts', accounts);
+
+      const session = {
+        role: 'guest',
+        guestId,
+        name: newAcc.name,
+        email: em,
+        phone: newAcc.phone,
+        issuedAt: Date.now(),
+        lastActivity: Date.now()
+      };
+      Data.setGuestSession(session);
+      AuditService.log('Guest Registered', 'Auth', guestId, `Registered guest account: ${em}`, 'Guest', newAcc.name);
+      return { ok: true, user: newAcc, session };
+    },
+
     login(email, password) {
       if (!email || !password) return { ok: false, error: 'Email and password are required.' };
       const em = email.trim().toLowerCase();
@@ -1153,6 +1194,17 @@ const SafeCustomEvent = typeof CustomEvent !== 'undefined' ? CustomEvent : (type
       allGuests.push(newGuest);
       store.set('guests', allGuests);
       return guestId;
+    },
+
+    updateGuest(guestIdOrEmail, updates = {}) {
+      const allGuests = store.get('guests', []);
+      const q = String(guestIdOrEmail || '').trim().toLowerCase();
+      let match = allGuests.find(g => (g.guestId && g.guestId.toLowerCase() === q) || (g.id && g.id.toLowerCase() === q) || (g.email && g.email.toLowerCase() === q));
+      if (match) {
+        Object.assign(match, updates);
+        store.set('guests', allGuests);
+      }
+      return match || null;
     }
   };
 

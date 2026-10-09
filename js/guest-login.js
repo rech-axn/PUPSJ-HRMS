@@ -115,61 +115,204 @@
       const email = $('loginEmail').value.trim().toLowerCase();
       const pass = $('loginPassword').value;
 
-      // 1. Check Staff Accounts
-      const staffMember = Data.findStaffByEmail(email);
-      if (staffMember) {
-        if (!staffMember.active) {
-          toast('This staff account has been deactivated. Please contact management.', 'bad');
-          return;
-        }
-        if (staffMember.password === pass) {
-          Data.setStaffSession({
-            id: staffMember.id,
-            name: staffMember.name,
-            email: staffMember.email,
-            role: staffMember.role,
-            shift: staffMember.shift
-          });
-          Data.audit('Staff signed in', 'Auth', staffMember.email, `Role: ${staffMember.role}`);
-          toast(`Welcome back, ${staffMember.name}.`, 'ok');
-          
+      // Authenticate through central AuthService with lockout & salted SHA-256
+      const authRes = (typeof AuthService !== 'undefined')
+        ? AuthService.login(email, pass)
+        : (typeof PUPSJ_Services !== 'undefined' ? PUPSJ_Services.AuthService.login(email, pass) : null);
+
+      if (authRes && authRes.ok) {
+        const session = authRes.data;
+        if (session.role === 'superadmin') {
+          toast(`Welcome back, Superadmin (${session.name}).`, 'ok');
           const dest = safeNextUrl || '../management/dashboard.html';
-          setTimeout(() => {
-            location.href = dest;
-          }, 350);
-          return;
+          setTimeout(() => { location.href = dest; }, 350);
         } else {
-          toast('Incorrect password. Please verify your credentials.', 'bad');
-          return;
+          toast(`Welcome back, ${session.name}.`, 'ok');
+          const dest = resolvePostAuthRedirect(false, session);
+          setTimeout(() => { location.href = dest; }, 350);
         }
+        return;
       }
 
-      // 2. Check Guest Accounts
-      const guest = Data.findGuestAccount(email);
-      if (guest) {
-        if (guest.password === pass) {
-          Data.setGuestSession({
-            name: guest.name,
-            email: guest.email,
-            phone: guest.phone,
-            code: ''
-          });
-          Data.audit('Guest signed in', 'Auth', guest.email, 'Portal login');
-          toast(`Welcome back, ${guest.name}.`, 'ok');
-
-          const dest = resolvePostAuthRedirect(false, guest);
-          setTimeout(() => {
-            location.href = dest;
-          }, 350);
-          return;
-        } else {
-          toast('Incorrect password. Please verify your credentials.', 'bad');
-          return;
-        }
+      if (authRes && !authRes.ok) {
+        toast(authRes.error, 'bad');
+        return;
       }
 
-      toast('No account found with this email address.', 'warn');
+      // Fallback
+      toast('Invalid email or password.', 'bad');
     };
+  }
+
+  
+  // ─── Real Forgot Password Simulation Flow ───
+  const btnForgot = $('btnForgotPass');
+  if (btnForgot) {
+    btnForgot.onclick = () => openForgotPasswordModal();
+  }
+
+  function openForgotPasswordModal() {
+    const bodyHtml = `
+      <div style="font-size: 13px;">
+        <p class="text-sm text-secondary" style="margin-bottom: 14px;">
+          Enter your registered email address to receive a simulated one-time password reset token.
+        </p>
+        <form id="forgotPassForm" onsubmit="return false;">
+          <div class="field" style="margin-bottom: 14px;">
+            <label for="forgotEmail">Registered Account Email *</label>
+            <input type="email" id="forgotEmail" required placeholder="e.g. ana.delacruz@example.com">
+          </div>
+          <button type="submit" class="btn btn-block" id="btnRequestResetToken">Generate Reset Token &rarr;</button>
+        </form>
+      </div>
+    `;
+
+    showModal('Forgot Password Recovery', bodyHtml, '', {
+      maxWidth: '460px',
+      onOpen: modalEl => {
+        const form = modalEl.querySelector('#forgotPassForm');
+        if (form) {
+          form.onsubmit = () => {
+            const email = modalEl.querySelector('#forgotEmail').value.trim().toLowerCase();
+            const guestAccs = Data.getGuestAccounts();
+            const adminAccs = store.get('adminAccounts', []);
+            const isGuest = guestAccs.find(g => g.email.toLowerCase() === email);
+            const isAdmin = adminAccs.find(a => a.email.toLowerCase() === email);
+
+            if (!isGuest && !isAdmin) {
+              toast('No registered account found with this email address.', 'bad');
+              return;
+            }
+
+            const token = 'RST-' + Math.floor(100000 + Math.random() * 900000);
+            store.set('_resetToken_' + email, {
+              token,
+              expires: Date.now() + 15 * 60 * 1000
+            });
+
+            closeModal();
+            showSimulatedEmailModal(email, token);
+          };
+        }
+      }
+    });
+  }
+
+  function showSimulatedEmailModal(email, token) {
+    const bodyHtml = `
+      <div style="font-size: 13px;">
+        <div style="background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 14px; margin-bottom: 16px;">
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--gold-ink); font-weight: 600; margin-bottom: 4px;">Simulated Email Dispatch</div>
+          <div style="margin-bottom: 4px;"><b>To:</b> ${esc(email)}</div>
+          <div style="margin-bottom: 8px;"><b>Subject:</b> Password Reset Token for PUPSJ Account</div>
+          <hr style="border: none; border-top: 1px dashed var(--line); margin: 8px 0;">
+          <p style="margin: 0 0 8px 0;">Hello,</p>
+          <p style="margin: 0 0 10px 0;">You requested a password reset. Use the one-time token below within 15 minutes:</p>
+          <div style="background: var(--surface); border: 1px solid var(--gold); border-radius: 4px; padding: 10px; text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 2px; color: var(--gold-ink);">
+            ${token}
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-block" id="btnProceedToReset">Proceed to Enter Token &amp; New Password &rarr;</button>
+      </div>
+    `;
+
+    showModal('Simulated Email Received', bodyHtml, '', {
+      maxWidth: '480px',
+      onOpen: modalEl => {
+        const btnProceed = modalEl.querySelector('#btnProceedToReset');
+        if (btnProceed) {
+          btnProceed.onclick = () => {
+            closeModal();
+            showResetPasswordFormModal(email, token);
+          };
+        }
+      }
+    });
+  }
+
+  function showResetPasswordFormModal(email, defaultToken) {
+    const bodyHtml = `
+      <form id="resetPassExecForm" style="font-size: 13px;" onsubmit="return false;">
+        <div class="field" style="margin-bottom: 12px;">
+          <label for="resetTokenInp">One-Time Token *</label>
+          <input type="text" id="resetTokenInp" value="${defaultToken}" required placeholder="e.g. RST-123456">
+        </div>
+        <div class="field" style="margin-bottom: 12px;">
+          <label for="resetNewPass">New Password (Min. 8 characters) *</label>
+          <input type="password" id="resetNewPass" required minlength="8" placeholder="Enter new secure password">
+        </div>
+        <div class="field" style="margin-bottom: 18px;">
+          <label for="resetConfirmPass">Confirm New Password *</label>
+          <input type="password" id="resetConfirmPass" required minlength="8" placeholder="Re-type new password">
+        </div>
+        <button type="submit" class="btn btn-block" id="btnSubmitResetPass">Update Password &rarr;</button>
+      </form>
+    `;
+
+    showModal('Set New Password', bodyHtml, '', {
+      maxWidth: '440px',
+      onOpen: modalEl => {
+        const form = modalEl.querySelector('#resetPassExecForm');
+        if (form) {
+          form.onsubmit = () => {
+            const tokenInp = modalEl.querySelector('#resetTokenInp').value.trim();
+            const newPass = modalEl.querySelector('#resetNewPass').value;
+            const confirmPass = modalEl.querySelector('#resetConfirmPass').value;
+
+            const stored = store.get('_resetToken_' + email);
+            if (!stored || stored.token !== tokenInp) {
+              toast('Invalid or expired reset token.', 'bad');
+              return;
+            }
+
+            if (Date.now() > stored.expires) {
+              toast('Token has expired. Please request a new token.', 'bad');
+              return;
+            }
+
+            if (newPass !== confirmPass) {
+              toast('Passwords do not match.', 'bad');
+              return;
+            }
+
+            if (newPass.length < 8) {
+              toast('Password must be at least 8 characters long.', 'bad');
+              return;
+            }
+
+            // Update account
+            const Crypto = window.PUPSJ_Crypto;
+            const salt = Crypto ? Crypto.generateSalt() : 'salt';
+            const hash = Crypto ? Crypto.hashPassword(newPass, salt) : newPass;
+
+            const guestAccs = Data.getGuestAccounts();
+            const guest = guestAccs.find(g => g.email.toLowerCase() === email);
+            if (guest) {
+              guest.salt = salt;
+              guest.passwordHash = hash;
+              guest.password = newPass;
+              Data.saveGuestAccounts(guestAccs);
+            }
+
+            const adminAccs = store.get('adminAccounts', []);
+            const admin = adminAccs.find(a => a.email.toLowerCase() === email);
+            if (admin) {
+              admin.salt = salt;
+              admin.passwordHash = hash;
+              store.set('adminAccounts', adminAccs);
+            }
+
+            store.remove('_resetToken_' + email);
+            Data.audit('Password Reset', 'Auth', email, 'Password reset via simulated token');
+            closeModal();
+            toast('Password reset successfully! Please sign in.', 'ok');
+            if ($('loginEmail')) $('loginEmail').value = email;
+            if ($('loginPassword')) $('loginPassword').value = '';
+          };
+        }
+      }
+    });
   }
 
   // ─── 2. Create Guest Account Flow ───
@@ -211,13 +354,18 @@
         return;
       }
 
+      const Crypto = window.PUPSJ_Crypto;
+      const salt = Crypto ? Crypto.generateSalt() : 'legacy_salt';
+      const passwordHash = Crypto ? Crypto.hashPassword(pass, salt) : pass;
+
       const guests = Data.getGuestAccounts();
       const newGuest = {
         name,
         email,
         phone,
-        password: pass,
-        created: today()
+        salt,
+        passwordHash,
+                created: today()
       };
       guests.push(newGuest);
       Data.saveGuestAccounts(guests);

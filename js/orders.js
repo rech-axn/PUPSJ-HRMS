@@ -14,7 +14,20 @@
   const pageSize = 10;
 
   function init() {
+    // Check URL deep links: ?code=...&table=...&new=1
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramCode = urlParams.get('code');
+    const paramTable = urlParams.get('table');
+    const paramNew = urlParams.get('new');
+    if (paramTable) searchQuery = paramTable.toLowerCase();
+
     renderApp();
+
+    if (paramNew) {
+      setTimeout(() => openNewPosOrderModal(paramTable), 150);
+    } else if (paramCode) {
+      setTimeout(() => openOrderDetailModal(paramCode), 150);
+    }
   }
 
   function renderApp() {
@@ -503,7 +516,7 @@
   };
 
   // ─── New POS Order Modal ───
-  function openNewPosOrderModal() {
+  function openNewPosOrderModal(defaultTable) {
     const menu = Data.getMenu().filter(m => m.available);
     const tables = Data.getTables();
     const inHouseRes = Data.getReservations().filter(r => r.st === 'Checked-in');

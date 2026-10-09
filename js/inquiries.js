@@ -18,6 +18,16 @@
     if (!app) return;
     initialized = true;
 
+    // Check URL deep links: ?id=...&ref=...&status=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramId = urlParams.get('id') || urlParams.get('ref');
+    const paramStatus = urlParams.get('status');
+    if (paramStatus) statusFilter = paramStatus;
+    if (paramId) {
+      searchQuery = paramId.toLowerCase();
+      setTimeout(() => openInquiryModal(paramId), 150);
+    }
+
     renderApp();
   }
 

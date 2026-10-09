@@ -272,8 +272,13 @@ const SafeCustomEvent = typeof CustomEvent !== 'undefined' ? CustomEvent : (type
         discount,
         statutoryDiscount,
         netTotal,
+        total: netTotal,
+        depositRequired: depDue,
         depDue,
         balDue,
+        vatableSales: netTaxable,
+        vatAmount,
+        serviceCharge: svcCharge,
         promoApplied,
         taxes: {
           net: netTaxable,
@@ -1260,6 +1265,7 @@ const SafeCustomEvent = typeof CustomEvent !== 'undefined' ? CustomEvent : (type
   };
 
   root.PUPSJ_Services = Services;
+  Object.assign(root, Services);
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = Services;
   }

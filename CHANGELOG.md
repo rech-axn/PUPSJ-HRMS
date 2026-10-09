@@ -2,6 +2,43 @@
 
 All notable changes and architectural enhancements are recorded in this file.
 
+## [Phase 3: Admin Modules, Hotel Settings & Operational Tools] - 2026-10-09
+
+### Added
+- **Hotel Settings & Tools Module (`pages/management/settings.html`, `js/settings.js`)**:
+  - Live, persistent `CONFIG` editing across Property details, Operating hours, Wi-Fi credentials, BIR Tax rates (VAT %, SC %), Deposit requirements, and SLA parameters.
+  - Pre-baked defense demonstration scenario switchers:
+    - `Busy Weekend`: Sets 90%+ room occupancy, seated tables, active dining orders.
+    - `Check-out Day`: Sets multiple departures due today with outstanding incidental dining balances for checkout settlement demos.
+    - `Kitchen Rush`: Injects active dining tickets with staggered age timers (<10m, 10-20m amber alert, >20m red alert) across kitchen and bar.
+    - `Maintenance Conflict`: Emergency OOS work order on Room 201 overlapping confirmed arrival reservation HTL-201 to trigger Relocation Assistant.
+  - Full System Backup & Restore: JSON export/import of all `pupsj.*` keys with schema validation.
+  - Factory Demo Reset: Restores fresh relative dates and default seed dataset.
+- **Promise-Based Accessible Confirm Dialog (`confirmDialog`)**:
+  - Added non-blocking, modal-driven `confirmDialog(message, title, options)` in `js/core.js` replacing native browser `confirm()`.
+  - Full keyboard accessibility (Tab focus trap, Escape to cancel, Enter to submit).
+- **URL Deep Linking Architecture**:
+  - `rooms.html`: Query params for `?room=...`, `?type=...`, `?floor=...`, and `?status=...`.
+  - `inquiries.html`: Query params for `?id=...`, `?ref=...`, and `?status=...` with modal auto-open.
+  - `maintenance.html`: Query params for `?room=...`, `?id=...`, and `?new=1` with room pre-population.
+  - `orders.html`: Query params for `?code=...`, `?table=...`, and `?new=1` with table pre-population.
+  - `reservations.html`: Query params for `?code=...`, `?status=...`, `?new=1`, and `?guest=...`.
+  - `messages.html`: Query params for `?thread=...`, `?id=...`, and `?new=1&guest=...` with staff-initiated conversation modal.
+
+### Changed
+- **Replaced all native `confirm()` calls**: Updated `audit.js`, `employees.js`, `maintenance.js`, `menu-mgmt.js`, `promotions.js`, `reservations.js`, `rooms.js`, `roomtypes.js` to `await confirmDialog(...)`.
+- **Personnel Directory & Superadmin Account (`pages/management/employees.html`, `js/employees.js`)**:
+  - Transformed former "Staff & Admins" into password-free Personnel Directory for operational task assignments.
+  - Removed passwords from personnel seeds, aligning with the two-role access model (`superadmin` and `guest`).
+  - Added Superadmin "My Account" management with password change, real-time strength meter, and pure-JS salted SHA-256 hash updates.
+  - Added Personnel task inspector modal aggregating active housekeeping and maintenance assignments.
+- **Navigation & Shell Polish (`js/staff-shell.js`)**:
+  - Added Hotel Settings to sidebar navigation under Settings and top-bar user menu.
+  - Renamed "Staff & Admins" link to "Personnel Directory".
+  - Disambiguated `menu.html` rename to `menu-management.html`.
+- **Testing**:
+  - Created `scratch/test-phase3-suite.js` passing 38/38 automated tests (cumulative total: 99/99 across all phases).
+
 ## [Phase 2: Domain Business Rules & Algorithms] - 2026-10-09
 
 ### Added

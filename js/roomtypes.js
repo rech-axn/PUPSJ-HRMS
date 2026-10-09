@@ -249,7 +249,7 @@
     };
   };
 
-  window.deleteRoomType = function (typeName) {
+  window.deleteRoomType = async function (typeName) {
     // Check reservations
     const reservations = Data.getReservations();
     const hasActiveRes = reservations.some(r => r.t === typeName && (r.st === 'Checked-in' || (r.st === 'Confirmed' && r.o >= today())));
@@ -266,7 +266,8 @@
       return;
     }
 
-    if (confirm(`Are you sure you want to delete category "${typeName}"?`)) {
+    const ok = await confirmDialog(`Are you sure you want to delete category "${typeName}"?`, 'Delete Room Type', { danger: true });
+    if (ok) {
       let types = Data.getTypes();
       types = types.filter(t => t.n !== typeName);
       Data.saveTypes(types);

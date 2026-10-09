@@ -22,7 +22,12 @@
     const deepId = params.get('id') || params.get('thread');
     if (deepId) {
       selectedThreadId = deepId;
-      statusFilter = 'All'; // Ensure thread is visible even if resolved
+      statusFilter = 'All';
+    }
+    const paramNew = params.get('new');
+    const paramGuest = params.get('guest');
+    if (paramNew) {
+      setTimeout(() => openNewThreadModal(paramGuest), 150);
     }
 
     renderApp();
@@ -78,6 +83,9 @@
           <h1 style="font-size: 28px; margin: 4px 0 0 0;">Guest Communications Inbox</h1>
         </div>
         <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-sm" id="btnNewStaffThread">
+            <span class="ic" data-icon="plus">[ICON: plus]</span> New Conversation
+          </button>
           <span class="pill ${unreadCount > 0 ? 'pill--bad' : 'pill--ok'}" style="font-size: 13px; padding: 6px 12px;">
             ${unreadCount > 0 ? `${unreadCount} Unread Message(s)` : 'All Messages Read'}
           </span>
@@ -240,6 +248,76 @@
       };
     }
   }
+
+
+  window.openNewThreadModal = function (defaultGuest) {
+    const guests = Data.getGuests();
+    const bodyHtml = `
+      <form id="newStaffThreadForm" style="font-size: 13px;" onsubmit="return false;">
+        <div class="field" style="margin-bottom: 12px;">
+          <label for="newThreadGuest">Guest Name / Recipient *</label>
+          <input type="text" id="newThreadGuest" required placeholder="Enter guest name" value="${defaultGuest ? esc(defaultGuest) : ''}">
+        </div>
+        <div class="field" style="margin-bottom: 12px;">
+          <label for="newThreadSubject">Subject / Topic *</label>
+          <input type="text" id="newThreadSubject" required placeholder="e.g. Special Request Follow-up">
+        </div>
+        <div class="field" style="margin-bottom: 12px;">
+          <label for="newThreadMessage">Initial Message *</label>
+          <textarea id="newThreadMessage" rows="4" required placeholder="Type your message to the guest…"></textarea>
+        </div>
+      </form>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button type="button" class="btn" id="btnSubmitNewThread">Send Message</button>
+    `;
+
+    showModal('Start New Conversation', bodyHtml, footerHtml, {
+      onOpen: modalEl => {
+        const btnSend = modalEl.querySelector('#btnSubmitNewThread');
+        if (btnSend) {
+          btnSend.onclick = () => {
+            const guestName = modalEl.querySelector('#newThreadGuest').value.trim();
+            const subject = modalEl.querySelector('#newThreadSubject').value.trim();
+            const text = modalEl.querySelector('#newThreadMessage').value.trim();
+
+            if (!guestName || !subject || !text) {
+              toast('Please complete all message fields.', 'bad');
+              return;
+            }
+
+            const threads = Data.getThreads();
+            const newId = 'TH-' + (threads.length + 1);
+            const newThread = {
+              id: newId,
+              guestName,
+              subject,
+              status: 'Open',
+              unreadStaff: 0,
+              unreadGuest: 1,
+              updated: nowISO(),
+              messages: [
+                {
+                  from: 'Staff',
+                  sender: (Data.getStaffSession()?.name) || 'Concierge',
+                  text,
+                  time: nowISO()
+                }
+              ]
+            };
+            threads.unshift(newThread);
+            Data.saveThreads(threads);
+            Data.audit('Create Message Thread', 'Message', newId, `Staff-initiated conversation with ${guestName}`);
+            closeModal();
+            selectedThreadId = newId;
+            toast('Message sent to guest.', 'ok');
+            renderApp();
+          };
+        }
+      }
+    });
+  };
 
   window.selectThread = function (id) {
     selectedThreadId = id;

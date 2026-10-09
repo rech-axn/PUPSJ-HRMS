@@ -261,6 +261,38 @@ const store = {
   }
 };
 
+// ─── Persistent Configuration Overrides ───
+try {
+  const savedCfg = store.get('config_overrides', null);
+  if (savedCfg && typeof savedCfg === 'object') {
+    for (const k of Object.keys(savedCfg)) {
+      if (typeof savedCfg[k] === 'object' && !Array.isArray(savedCfg[k]) && savedCfg[k] !== null && CONFIG[k]) {
+        Object.assign(CONFIG[k], savedCfg[k]);
+      } else {
+        CONFIG[k] = savedCfg[k];
+      }
+    }
+  }
+} catch (e) {
+  console.warn('Failed to apply config overrides', e);
+}
+
+const saveConfigOverrides = (overrides) => {
+  if (!overrides || typeof overrides !== 'object') return false;
+  for (const k of Object.keys(overrides)) {
+    if (typeof overrides[k] === 'object' && !Array.isArray(overrides[k]) && overrides[k] !== null && CONFIG[k]) {
+      Object.assign(CONFIG[k], overrides[k]);
+    } else {
+      CONFIG[k] = overrides[k];
+    }
+  }
+  store.set('config_overrides', overrides);
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('pupsj:data-change', { detail: { entity: 'config', action: 'update' } }));
+  }
+  return true;
+};
+
 // ─── Modal Component ───
 let _activeModalEl = null;
 let _modalPrevFocusedEl = null;
@@ -339,6 +371,7 @@ const showModal = (title, bodyHtml, footerHtml = '', options = {}) => {
   backdrop._keyHandler = keyHandler;
   document.addEventListener('keydown', keyHandler);
 
+  backdrop._onClose = options.onClose;
   if (typeof options.onOpen === 'function') {
     options.onOpen(backdrop);
   }
@@ -349,6 +382,10 @@ const closeModal = () => {
   const el = _activeModalEl || document.getElementById('appModalBackdrop');
   if (!el) return;
   _activeModalEl = null;
+
+  if (typeof el._onClose === 'function') {
+    try { el._onClose(); } catch (e) { console.warn(e); }
+  }
 
   if (el._keyHandler) {
     document.removeEventListener('keydown', el._keyHandler);
@@ -361,6 +398,59 @@ const closeModal = () => {
     _modalPrevFocusedEl.focus();
     _modalPrevFocusedEl = null;
   }
+};
+
+// ─── Promise-Based Accessible Confirm Dialog ───
+const confirmDialog = (message, title = 'Confirm Action', options = {}) => {
+  return new Promise(resolve => {
+    let resolved = false;
+    const confirmText = options.confirmText || 'Confirm';
+    const cancelText = options.cancelText || 'Cancel';
+    const btnClass = options.btnClass || (options.danger !== false ? 'btn-danger' : 'btn');
+
+    const bodyHtml = `
+      <div style="font-size: 14px; color: var(--ink-2); line-height: 1.6; padding: 6px 0;">
+        ${esc(message)}
+      </div>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn-secondary" id="confirmDialogCancelBtn">${esc(cancelText)}</button>
+      <button type="button" class="${btnClass}" id="confirmDialogConfirmBtn">${esc(confirmText)}</button>
+    `;
+
+    showModal(title, bodyHtml, footerHtml, {
+      maxWidth: options.maxWidth || '440px',
+      onClose: () => {
+        if (!resolved) {
+          resolved = true;
+          resolve(false);
+        }
+      },
+      onOpen: modalEl => {
+        const cancelBtn = modalEl.querySelector('#confirmDialogCancelBtn');
+        const confirmBtn = modalEl.querySelector('#confirmDialogConfirmBtn');
+        if (cancelBtn) {
+          cancelBtn.onclick = () => {
+            if (!resolved) {
+              resolved = true;
+              closeModal();
+              resolve(false);
+            }
+          };
+        }
+        if (confirmBtn) {
+          confirmBtn.onclick = () => {
+            if (!resolved) {
+              resolved = true;
+              closeModal();
+              resolve(true);
+            }
+          };
+          confirmBtn.focus();
+        }
+      }
+    });
+  });
 };
 
 // ─── Toast Component ───
@@ -650,6 +740,8 @@ if (typeof window !== 'undefined') {
   window.imgPlaceholder = imgPlaceholder;
   window.showModal = showModal;
   window.closeModal = closeModal;
+  window.confirmDialog = confirmDialog;
+  window.saveConfigOverrides = saveConfigOverrides;
   window.toast = toast;
   window.exportCSV = exportCSV;
   window.printDocument = printDocument;

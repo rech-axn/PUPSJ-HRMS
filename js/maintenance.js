@@ -127,7 +127,20 @@
     if (!app) return;
     initialized = true;
 
+    // Check URL deep links: ?room=...&id=...&new=1
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramRoom = urlParams.get('room');
+    const paramId = urlParams.get('id');
+    const paramNew = urlParams.get('new');
+    if (paramRoom) searchQuery = String(paramRoom);
+
     renderApp();
+
+    if (paramNew) {
+      setTimeout(() => openNewOrderModal(paramRoom), 150);
+    } else if (paramId) {
+      setTimeout(() => openEditOrderModal(paramId), 150);
+    }
   }
 
   function getStaffList() {
@@ -442,7 +455,7 @@
     renderApp();
   };
 
-  function openNewOrderModal() {
+  function openNewOrderModal(defaultRoom) {
     const rooms = Data.getRooms();
     const staff = getStaffList();
 
@@ -719,8 +732,9 @@
       commitEdit();
     };
 
-    $('btnDeleteMxOrder').onclick = () => {
-      if (confirm(`Delete maintenance order ${item.id}?`)) {
+    $('btnDeleteMxOrder').onclick = async () => {
+      const ok = await confirmDialog(`Delete maintenance order ${item.id}?`, 'Delete Maintenance Order', { danger: true });
+      if (ok) {
         const idx = list.indexOf(item);
         if (idx !== -1) list.splice(idx, 1);
         Data.saveMaintenance(list);

@@ -172,8 +172,9 @@
       exportCSV(`PUPSJ_Audit_Log_${today()}.csv`, cols, items);
     };
 
-    $('btnResetDemoData').onclick = () => {
-      if (confirm('Are you sure you want to reset all hotel and restaurant demo data to fresh initial relative dates? All operational changes will be restored to clean defaults.')) {
+    $('btnResetDemoData').onclick = async () => {
+      const ok = await confirmDialog('Are you sure you want to reset all hotel and restaurant demo data to fresh initial relative dates? All operational changes will be restored to clean defaults.', 'Reset Demo Data', { danger: true });
+      if (ok) {
         Data.resetDemoData();
         toast('System data reset successfully! Reloading…', 'ok');
         setTimeout(() => window.location.reload(), 600);

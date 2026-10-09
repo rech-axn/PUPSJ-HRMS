@@ -46,6 +46,8 @@
   // Current page filename for active nav highlighting
   const curFile = location.pathname.split('/').pop() || 'dashboard.html';
   const userRole = 'Superadmin';
+  const isPermitted = () => true;
+  const isCurrentPageAllowed = true;
 
   // ─── Sidebar Navigation Structure ───
   const NAV_SECTIONS = [
@@ -69,7 +71,7 @@
         { label: 'Orders', icon: 'tray', href: '../management/orders.html', file: 'orders.html' },
         { label: 'Kitchen', icon: 'kitchen', href: '../management/kitchen.html', file: 'kitchen.html' },
         { label: 'Tables', icon: 'table', href: '../management/tables.html', file: 'tables.html' },
-        { label: 'Menu', icon: 'utensils', href: '../management/menu.html', file: 'menu.html' }
+        { label: 'Menu & Recipes', icon: 'utensils', href: '../management/menu-management.html', file: 'menu-management.html' }
       ]
     },
     {
@@ -92,8 +94,9 @@
       items: [
         { label: 'Rooms', icon: 'key', href: '../rooms/rooms.html', file: 'rooms.html' },
         { label: 'Room Types', icon: 'clipboard', href: '../rooms/roomtypes.html', file: 'roomtypes.html' },
+        { label: 'Hotel Settings', icon: 'settings', href: '../management/settings.html', file: 'settings.html' },
         { label: 'Promotions', icon: 'tag', href: '../management/promotions.html', file: 'promotions.html' },
-        { label: 'Staff & Admins', icon: 'shield', href: '../management/employees.html', file: 'employees.html' },
+        { label: 'Personnel Directory', icon: 'shield', href: '../management/employees.html', file: 'employees.html' },
         { label: 'Audit Log', icon: 'history', href: '../management/audit.html', file: 'audit.html' }
       ]
     }
@@ -206,13 +209,14 @@
 
       // Build User Dropdown based on permissions
       let userMenuLinksHtml = '';
-      if (isPermitted('employees.html')) {
-        userMenuLinksHtml += `
-          <a href="../management/employees.html">
-            <span class="ic" data-icon="shield">[ICON: shield]</span> Staff Accounts
-          </a>
-        `;
-      }
+      userMenuLinksHtml += `
+        <a href="../management/settings.html">
+          <span class="ic" data-icon="settings">[ICON: settings]</span> Hotel Settings
+        </a>
+        <a href="../management/employees.html">
+          <span class="ic" data-icon="shield">[ICON: shield]</span> Personnel Directory
+        </a>
+      `;
       if (isPermitted('audit.html')) {
         userMenuLinksHtml += `
           <a href="../management/audit.html">

@@ -83,15 +83,26 @@ const generateSeeds = () => {
 
   // Staff accounts
   const staff = [
-    { id: 1, name: 'Ruben Herwitz', email: 'admin@pupsj.edu.ph', password: 'admin123', role: 'Manager', shift: 'Day', phone: '+63 917 100 0001', active: true, created: '2026-01-15' },
-    { id: 2, name: 'Maria Santos', email: 'maria@pupsj.edu.ph', password: 'frontdesk123', role: 'Front Desk', shift: 'Day', phone: '+63 917 100 0002', active: true, created: '2026-02-01' },
-    { id: 3, name: 'John Reyes', email: 'john@pupsj.edu.ph', password: 'frontdesk123', role: 'Front Desk', shift: 'Night', phone: '+63 917 100 0003', active: true, created: '2026-02-01' },
-    { id: 4, name: 'Liza Gomez', email: 'liza@pupsj.edu.ph', password: 'housekeeping123', role: 'Housekeeping', shift: 'Day', phone: '+63 917 100 0004', active: true, created: '2026-03-10' },
-    { id: 5, name: 'Pedro Cruz', email: 'pedro@pupsj.edu.ph', password: 'housekeeping123', role: 'Housekeeping', shift: 'Day', phone: '+63 917 100 0005', active: true, created: '2026-03-10' },
-    { id: 6, name: 'Ana Bautista', email: 'ana@pupsj.edu.ph', password: 'housekeeping123', role: 'Housekeeping', shift: 'Night', phone: '+63 917 100 0006', active: true, created: '2026-04-05' },
-    { id: 7, name: 'Carlo Navarro', email: 'carlo@pupsj.edu.ph', password: 'maintenance123', role: 'Maintenance', shift: 'Day', phone: '+63 917 100 0007', active: true, created: '2026-05-20' },
-    { id: 8, name: 'Chef Marco Valdez', email: 'kitchen@pupsj.edu.ph', password: 'kitchen123', role: 'Kitchen', shift: 'Day', phone: '+63 917 100 0009', active: true, created: '2026-06-01' },
-    { id: 9, name: 'Ben Aquino', email: 'ben@pupsj.edu.ph', password: 'security123', role: 'Security', shift: 'Night', phone: '+63 917 100 0008', active: true, created: '2026-06-01' }
+    { id: 1, name: 'Ruben Herwitz', email: 'ruben@pupsj.edu.ph', department: 'Management', role: 'Management', shift: 'Day', phone: '+63 917 100 0001', active: true, created: '2026-01-15' },
+    { id: 2, name: 'Maria Santos', email: 'maria@pupsj.edu.ph', department: 'Front Desk', role: 'Front Desk', shift: 'Day', phone: '+63 917 100 0002', active: true, created: '2026-02-01' },
+    { id: 3, name: 'John Reyes', email: 'john@pupsj.edu.ph', department: 'Front Desk', role: 'Front Desk', shift: 'Night', phone: '+63 917 100 0003', active: true, created: '2026-02-01' },
+    { id: 4, name: 'Liza Gomez', email: 'liza@pupsj.edu.ph', department: 'Housekeeping', role: 'Housekeeping', shift: 'Day', phone: '+63 917 100 0004', active: true, created: '2026-03-10' },
+    { id: 5, name: 'Pedro Cruz', email: 'pedro@pupsj.edu.ph', department: 'Housekeeping', role: 'Housekeeping', shift: 'Day', phone: '+63 917 100 0005', active: true, created: '2026-03-10' },
+    { id: 6, name: 'Ana Bautista', email: 'ana@pupsj.edu.ph', department: 'Housekeeping', role: 'Housekeeping', shift: 'Night', phone: '+63 917 100 0006', active: true, created: '2026-04-05' },
+    { id: 7, name: 'Carlo Navarro', email: 'carlo@pupsj.edu.ph', department: 'Maintenance', role: 'Maintenance', shift: 'Day', phone: '+63 917 100 0007', active: true, created: '2026-05-20' },
+    { id: 8, name: 'Chef Marco Valdez', email: 'kitchen@pupsj.edu.ph', department: 'Kitchen', role: 'Kitchen', shift: 'Day', phone: '+63 917 100 0009', active: true, created: '2026-06-01' },
+    { id: 9, name: 'Ben Aquino', email: 'ben@pupsj.edu.ph', department: 'Security', role: 'Security', shift: 'Night', phone: '+63 917 100 0008', active: true, created: '2026-06-01' }
+  ];
+
+  const adminAccounts = [
+    {
+      adminId: 'ADM-001',
+      name: 'Superadmin',
+      email: 'admin@pupsj.edu.ph',
+      salt: 'a1f8c49e2b704d5a',
+      passwordHash: 'c193ace2662d8a791ca9c6f61027af86c936bba8ec12ffe58c0c664fce34393d',
+      role: 'superadmin'
+    }
   ];
 
   // Canonical Dynamic Reservations relative to today()
@@ -958,7 +969,7 @@ const Data = {
   isRoomUnderMaintenance(roomNum) {
     const num = Number(roomNum);
     const m = this.getMaintenance();
-    return m.some(r => r.room === num && r.status !== 'Resolved' && r.outOfService);
+    return m.some(r => Number(r.room) === num && (r.status || r.st) !== 'Resolved' && (r.outOfService || r.oos));
   },
 
   // Canonical Real-Time Room Availability
@@ -1364,6 +1375,13 @@ const Data = {
   },
 
   // Polymorphic Charge Handler (accepts code string or reservation object)
+  addFolioCharge(codeOrObj, descOrOpts, amount, cat) {
+    if (typeof descOrOpts === 'object' && descOrOpts !== null) {
+      return this.addCharge(codeOrObj, descOrOpts.desc || descOrOpts.description, descOrOpts.amt || descOrOpts.amount, descOrOpts.cat || descOrOpts.category);
+    }
+    return this.addCharge(codeOrObj, descOrOpts, amount, cat);
+  },
+
   addCharge(codeOrObj, desc, amount, cat = 'Incidentals') {
     let r = typeof codeOrObj === 'string' ? this.findRes(codeOrObj) : codeOrObj;
     if (!r) throw new Error('Reservation not found: ' + codeOrObj);

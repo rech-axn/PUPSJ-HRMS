@@ -8,6 +8,9 @@
 (function () {
   let statusFilter = '';
   let typeFilter = '';
+      floorFilter = '';
+      const flSel = $('roomFloorFilter'); if (flSel) flSel.value = '';
+  let floorFilter = '';
   let searchQuery = '';
   let page = 1;
   const pageSize = 12;
@@ -18,6 +21,13 @@
     const app = $('roomsApp');
     if (!app) return;
     initialized = true;
+
+    // Check URL deep links: ?room=...&type=...&floor=...&status=...
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('room')) searchQuery = urlParams.get('room').toLowerCase();
+    if (urlParams.get('type')) typeFilter = urlParams.get('type');
+    if (urlParams.get('floor')) floorFilter = urlParams.get('floor');
+    if (urlParams.get('status')) statusFilter = urlParams.get('status');
 
     renderApp();
   }
@@ -115,6 +125,15 @@
               <option value="Maintenance" ${statusFilter === 'Maintenance' ? 'selected' : ''}>Maintenance</option>
             </select>
           </div>
+          <div class="field" style="margin: 0; min-width: 140px;">
+            <label for="roomFloorFilter">Floor</label>
+            <select id="roomFloorFilter">
+              <option value="">All Floors</option>
+              <option value="1" ${floorFilter === '1' ? 'selected' : ''}>Floor 1</option>
+              <option value="2" ${floorFilter === '2' ? 'selected' : ''}>Floor 2</option>
+              <option value="3" ${floorFilter === '3' ? 'selected' : ''}>Floor 3</option>
+            </select>
+          </div>
           <div class="field" style="margin: 0; min-width: 180px;">
             <label for="roomTypeFilter">Room Category</label>
             <select id="roomTypeFilter">
@@ -160,6 +179,7 @@
     $('roomSearchInput').oninput = (e) => { searchQuery = e.target.value.toLowerCase().trim(); page = 1; renderTable(); };
     $('roomStatusFilter').onchange = (e) => { statusFilter = e.target.value; page = 1; renderTable(); };
     $('roomTypeFilter').onchange = (e) => { typeFilter = e.target.value; page = 1; renderTable(); };
+    const flSel = $('roomFloorFilter'); if (flSel) flSel.onchange = (e) => { floorFilter = e.target.value; page = 1; renderTable(); };
 
     $('btnResetRoomFilters').onclick = () => {
       searchQuery = '';
@@ -180,6 +200,7 @@
     return rooms.filter(r => {
       if (statusFilter && r.status !== statusFilter) return false;
       if (typeFilter && r.type !== typeFilter) return false;
+      if (floorFilter && String(r.roomNum)[0] !== floorFilter) return false;
       if (searchQuery) {
         const text = `${r.roomNum} ${r.type}`.toLowerCase();
         if (!text.includes(searchQuery)) return false;
@@ -418,7 +439,7 @@
     }
   };
 
-  window.deleteRoom = function (num) {
+  window.deleteRoom = async function (num) {
     const reservations = Data.getReservations();
     const hasActiveRes = reservations.some(r => Number(r.n) === Number(num) && (r.st === 'Checked-in' || (r.st === 'Confirmed' && r.o >= today())));
     if (hasActiveRes) {
@@ -426,7 +447,8 @@
       return;
     }
 
-    if (confirm(`Are you sure you want to delete Room ${num} from inventory?`)) {
+    const ok = await confirmDialog(`Are you sure you want to delete Room ${num} from inventory?`, 'Delete Room', { danger: true });
+    if (ok) {
       let rooms = Data.getRooms();
       rooms = rooms.filter(r => Number(r.n) !== Number(num));
       Data.saveRooms(rooms);

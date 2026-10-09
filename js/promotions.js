@@ -435,8 +435,9 @@
     };
   };
 
-  window.deletePromo = function (code) {
-    if (confirm(`Are you sure you want to delete promo code "${code}"?`)) {
+  window.deletePromo = async function (code) {
+    const ok = await confirmDialog(`Are you sure you want to delete promo code "${code}"?`, 'Delete Promo Code', { danger: true });
+    if (ok) {
       let list = Data.getPromos();
       list = list.filter(p => p.code !== code);
       Data.savePromos(list);

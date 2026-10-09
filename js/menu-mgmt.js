@@ -399,12 +399,13 @@
     };
   };
 
-  window.deleteMenuItem = function (id) {
+  window.deleteMenuItem = async function (id) {
     const list = Data.getMenu();
     const item = list.find(m => String(m.id) === String(id));
     if (!item) return;
 
-    if (confirm(`Are you sure you want to delete "${item.name}" from the menu?`)) {
+    const ok = await confirmDialog(`Are you sure you want to delete "${item.name}" from the menu?`, 'Delete Menu Item', { danger: true });
+    if (ok) {
       const idx = list.indexOf(item);
       if (idx !== -1) list.splice(idx, 1);
       Data.saveMenu(list);

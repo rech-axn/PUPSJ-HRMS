@@ -21,9 +21,11 @@
   const paramCode = urlParams.get('code');
   const paramNew = urlParams.get('new');
   const paramGuest = urlParams.get('guest');
+  const paramStatus = urlParams.get('status');
   const paramPhone = urlParams.get('phone');
 
   function init() {
+    if (paramStatus) statusFilter = paramStatus;
     renderApp();
     if (paramCode) {
       setTimeout(() => openReservationDetail(paramCode), 200);
@@ -697,9 +699,10 @@
 
     const btnOut = $('btnDetailCheckOut');
     if (btnOut) {
-      btnOut.onclick = () => {
+      btnOut.onclick = async () => {
         if (bal > 0) {
-          if (!confirm(`Guest has an outstanding balance of ${peso(bal)}. Proceed with check-out settlement?`)) {
+          const ok = await confirmDialog(`Guest has an outstanding balance of ${peso(bal)}. Proceed with check-out settlement?`, 'Outstanding Balance', { confirmText: 'Settle Balance' });
+          if (!ok) {
             openFolioModal(r.c, () => renderApp());
             return;
           }
@@ -717,8 +720,9 @@
 
     const btnCancel = $('btnDetailCancel');
     if (btnCancel) {
-      btnCancel.onclick = () => {
-        if (confirm(`Cancel reservation ${r.c} for ${r.g}?`)) {
+      btnCancel.onclick = async () => {
+        const ok = await confirmDialog(`Cancel reservation ${r.c} for ${r.g}?`, 'Cancel Reservation', { danger: true });
+        if (ok) {
           const resCancel = Data.cancelReservation(r.c, 'Staff');
           if (resCancel.success) {
             toast(`Reservation ${r.c} cancelled. ${(resCancel.retainedFee || resCancel.fee || 0) > 0 ? 'Cancellation fee retained: ' + peso(resCancel.retainedFee || resCancel.fee) : 'Deposit refunded.'}`, 'ok');

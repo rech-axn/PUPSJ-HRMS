@@ -1,0 +1,1264 @@
+/* ==========================================================================
+   PUPSJ Hotel & Restaurant — Guest Portal Logic (guest-portal.js)
+   Full guest self-service: Current stay management, folio, in-room dining,
+   housekeeping/maintenance requests, reservations, reviews, loyalty, and messaging.
+   ========================================================================== */
+'use strict';
+
+(function () {
+  const T = today();
+  let guestSession = Data.getGuestSession();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryCode = urlParams.get('code');
+
+  // Strict session check: redirect to guest-login with ?next= set
+  if (!guestSession) {
+    const returnTarget = window.location.pathname + window.location.search;
+    if (queryCode) {
+      window.location.replace(`../auth/guest-login.html?code=${encodeURIComponent(queryCode)}&next=${encodeURIComponent(returnTarget)}`);
+    } else {
+      window.location.replace(`../auth/guest-login.html?next=${encodeURIComponent(returnTarget)}`);
+    }
+    return;
+  }
+
+  // ─── Header Info ───
+  if ($('gpWelcomeTitle')) {
+    $('gpWelcomeTitle').textContent = `Welcome, ${esc(guestSession.name)}`;
+  }
+
+  const guestNights = Data.getGuestNights(guestSession.name);
+  const guestTier = Data.getGuestTier(guestNights);
+
+  if ($('gpGuestMeta')) {
+    $('gpGuestMeta').innerHTML = `
+      <span>${esc(guestSession.email || guestSession.phone || 'Guest Member')}</span> &middot;
+      <span class="pill pill--ok" style="font-size: 11px;">${esc(guestTier.name)} Tier (${guestNights} Nights)</span>
+    `;
+  }
+
+  if ($('gpHeaderActions')) {
+    $('gpHeaderActions').innerHTML = `
+      <a href="../rooms/rooms-deals.html" class="btn-secondary btn-sm">
+        + Book Another Room
+      </a>
+      <button class="btn-ghost btn-sm" id="btnGpSignOut">
+        Sign Out
+      </button>
+    `;
+    const soBtn = $('btnGpSignOut');
+    if (soBtn) {
+      soBtn.onclick = () => {
+        Data.clearGuestSession();
+        window.location.replace('../main/home.html');
+      };
+    }
+  }
+
+  // ─── Tab Switching ───
+  const tabBtns = $$('#gpTabs .tab-btn');
+  const tabContents = {
+    stay: $('tabCurrentStay'),
+    reservations: $('tabMyReservations'),
+    loyalty: $('tabLoyaltyRewards'),
+    messages: $('tabMessages'),
+    profile: $('tabProfile')
+  };
+
+  const initialTab = urlParams.get('tab') || (location.hash ? location.hash.replace('#', '') : 'stay');
+  let activeTabKey = tabContents[initialTab] ? initialTab : 'stay';
+
+  function switchTab(tabKey) {
+    activeTabKey = tabKey;
+    tabBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tabKey);
+    });
+    Object.entries(tabContents).forEach(([k, el]) => {
+      if (el) el.style.display = k === tabKey ? 'block' : 'none';
+    });
+
+    if (tabKey === 'stay') renderCurrentStay();
+    else if (tabKey === 'reservations') renderMyReservations();
+    else if (tabKey === 'loyalty') renderLoyalty();
+    else if (tabKey === 'messages') renderMessages();
+    else if (tabKey === 'profile') renderProfile();
+  }
+
+  tabBtns.forEach(btn => {
+    btn.onclick = () => switchTab(btn.dataset.tab);
+  });
+
+  // ─── Find Guest's Primary Active Stay ───
+  function getActiveReservation() {
+    // If a specific ?code= was passed in URL, verify ownership strictly:
+    if (queryCode) {
+      const target = Data.findRes(queryCode);
+      if (target) {
+        const owns = (guestSession.email && target.email && target.email.toLowerCase() === guestSession.email.toLowerCase()) ||
+                     (guestSession.phone && target.ph && target.ph === guestSession.phone);
+        if (owns) {
+          return target;
+        } else {
+          toast('Access restricted: Reservation ' + queryCode + ' belongs to another guest account.', 'bad');
+        }
+      }
+    }
+
+    const all = Data.getReservations().filter(r =>
+      (guestSession.email && r.email && r.email.toLowerCase() === guestSession.email.toLowerCase()) ||
+      (guestSession.phone && r.ph && r.ph === guestSession.phone)
+    );
+
+    // Prioritize Checked-in -> Confirmed -> Pending
+    const checkedIn = all.find(r => r.st === 'Checked-in');
+    if (checkedIn) return checkedIn;
+
+    const confirmed = all.find(r => r.st === 'Confirmed');
+    if (confirmed) return confirmed;
+
+    const pending = all.find(r => r.st === 'Pending');
+    if (pending) return pending;
+
+    // Most recent reservation
+    return all[0] || null;
+  }
+
+  // ─── 1. Tab: Current Stay ───
+  function renderCurrentStay() {
+    const container = $('tabCurrentStay');
+    if (!container) return;
+
+    const res = getActiveReservation();
+
+    if (!res || res.st === 'Cancelled' || res.st === 'Checked-out') {
+      container.innerHTML = `
+        <div class="empty-state">
+          <span class="ic" data-icon="key" style="font-size: 24px; margin-bottom: 8px;">[ICON: key]</span>
+          <h3 style="margin-bottom: 6px;">No Active In-Stay Reservation</h3>
+          <p class="empty-state-text">
+            ${res && res.st === 'Checked-out'
+              ? 'Your previous stay has been checked out. We look forward to welcoming you back!'
+              : 'You do not have a room currently checked in or confirmed.'}
+          </p>
+          <a href="../rooms/rooms-deals.html" class="btn">
+            Explore Available Rooms &rarr;
+          </a>
+        </div>
+      `;
+      return;
+    }
+
+    const nts = Data.nts(res);
+    const total = Data.tot(res);
+    const paid = Data.paidAmt(res);
+    const balance = Data.balOf(res);
+    const isCheckedIn = res.st === 'Checked-in';
+
+    container.innerHTML = `
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;" class="grid-2">
+        <!-- Left: Stay Summary & Digital Key -->
+        <div>
+          <div class="card" style="margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+              <div>
+                <span class="pill ${isCheckedIn ? 'pill--info' : 'pill--ok'}">
+                  ${isCheckedIn ? 'Currently In-House' : res.st}
+                </span>
+                <h2 style="font-size: 26px; margin: 8px 0 2px;">${esc(res.t)}</h2>
+                <div class="text-sm text-muted">Confirmation Code: <b>${res.c}</b></div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 24px; font-weight: 700; color: var(--gold-ink);">
+                  ${res.n ? 'Room ' + res.n : 'Room Assigned at Check-in'}
+                </div>
+                <div class="text-sm text-muted">${res.gu} Guest${res.gu > 1 ? 's' : ''}</div>
+              </div>
+            </div>
+
+            <div class="card card-sm" style="background-color: var(--surface-2); margin-bottom: 16px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+                <div><b>Check-In:</b> ${fmtDate(res.i)} (From 2:00 PM)</div>
+                <div><b>Check-Out:</b> ${fmtDate(res.o)} (Until 12:00 PM)</div>
+                <div><b>Duration:</b> ${nts} Night${nts > 1 ? 's' : ''}</div>
+                <div><b>Primary Contact:</b> ${esc(res.ph || guestSession.phone || 'On file')}</div>
+              </div>
+            </div>
+
+            <!-- In-Stay Service Actions -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="btn btn-sm" id="btnGpOrderDining" ${isCheckedIn ? '' : 'disabled'}>
+                <span class="ic" data-icon="utensils">[ICON: utensils]</span> Order In-Room Dining
+              </button>
+              <button class="btn-secondary btn-sm" id="btnGpHousekeeping" ${isCheckedIn ? '' : 'disabled'}>
+                <span class="ic" data-icon="broom">[ICON: broom]</span> Request Housekeeping
+              </button>
+              <button class="btn-secondary btn-sm" id="btnGpMaintenance">
+                <span class="ic" data-icon="wrench">[ICON: wrench]</span> Report an Issue
+              </button>
+              <button class="btn-secondary btn-sm" id="btnGpEditRes" ${isCheckedIn ? 'disabled title="Date modifications locked once checked in"' : ''}>
+                <span class="ic" data-icon="edit">[ICON: edit]</span> Modify Booking
+              </button>
+            </div>
+            ${!isCheckedIn ? '<div class="text-sm text-muted" style="margin-top: 8px;">In-room dining and housekeeping requests activate upon check-in.</div>' : ''}
+          </div>
+
+          <!-- Room Wi-Fi Access Card -->
+          <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+              <h3>High-Speed Guest Wi-Fi</h3>
+              <span class="pill pill--ok">Complimentary</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 14px;">
+              <div>
+                <span class="text-muted text-sm">Network Name:</span>
+                <div style="font-weight: 600; margin-top: 2px;">${CONFIG.wifi.network}</div>
+              </div>
+              <div>
+                <span class="text-muted text-sm">Passcode:</span>
+                <div style="font-weight: 600; margin-top: 2px; font-family: monospace; font-size: 15px;">${CONFIG.wifi.password}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Folio & Billing Settlement -->
+        <div>
+          <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+              <h3>Stay Folio &amp; Ledger</h3>
+              <span class="pill ${balance > 0 ? 'pill--warn' : 'pill--ok'}">
+                ${balance > 0 ? 'Balance Due' : 'Paid in Full'}
+              </span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between;">
+                <span class="text-secondary">Room accommodation:</span>
+                <span>${peso(Data.roomChg(res))}</span>
+              </div>
+              ${(res.x || []).map(x => `
+                <div style="display: flex; justify-content: space-between;">
+                  <span class="text-secondary">${esc(x.desc)}:</span>
+                  <span>${peso(x.amt)}</span>
+                </div>
+              `).join('')}
+              <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 6px; font-weight: 600;">
+                <span>Total Charges:</span>
+                <b>${peso(total)}</b>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: var(--ok);">
+                <span>Payments Settled:</span>
+                <b>&minus; ${peso(paid)}</b>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 8px; font-size: 15px; font-weight: 700; color: ${balance > 0 ? 'var(--bad)' : 'var(--ok)'};">
+                <span>Current Balance:</span>
+                <span>${balance > 0 ? peso(balance) : '₱0 (Settled)'}</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${balance > 0 ? `
+                <button class="btn btn-sm btn-block" id="btnGpPayBalance">
+                  Pay Balance Due (${peso(balance)}) &rarr;
+                </button>
+              ` : ''}
+              <button class="btn-secondary btn-sm btn-block" onclick="printTaxInvoice('${res.c}')">
+                <span class="ic" data-icon="print">[ICON: print]</span> View &amp; Print Official Tax Invoice
+              </button>
+              ${isCheckedIn ? `
+                <button class="btn-ghost btn-sm btn-block" id="btnGpExpressCheckout" style="color: var(--bad); margin-top: 6px;">
+                  Express Check-out &rarr;
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Setup action handlers
+    setupStayActionHandlers(res);
+  }
+
+  function setupStayActionHandlers(res) {
+    // 1. Order In-Room Dining
+    const orderBtn = $('btnGpOrderDining');
+    if (orderBtn) {
+      orderBtn.onclick = () => {
+        const menu = Data.getMenu().filter(m => m.available);
+        showModal(
+          `Order In-Room Dining (Room ${res.n})`,
+          `
+          <p class="text-sm">Select dishes to be delivered directly to your room. Charges will be posted to your room folio.</p>
+          <div style="max-height: 280px; overflow-y: auto; margin: 12px 0;">
+            ${menu.map(m => `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line);">
+                <div style="flex: 1; padding-right: 12px;">
+                  <b>${esc(m.name)}</b>
+                  <div class="text-sm text-muted">${peso(m.price)} &middot; ${esc(m.category)}</div>
+                </div>
+                <input type="number" min="0" max="10" value="0" data-dish-id="${m.id}" data-price="${m.price}" data-name="${esc(m.name)}" style="width: 60px; height: 32px;">
+              </div>
+            `).join('')}
+          </div>
+          <div class="field">
+            <label for="diningNotes">Preparation Notes (Optional)</label>
+            <input type="text" id="diningNotes" placeholder="No spicy sauce, extra cutlery, ice water…">
+          </div>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn" id="btnSubmitDiningOrder">Place Order to Room Folio</button>
+          `,
+          {
+            onOpen(modal) {
+              const submitBtn = modal.querySelector('#btnSubmitDiningOrder');
+              submitBtn.onclick = () => {
+                const lines = [];
+                modal.querySelectorAll('input[type="number"]').forEach(inp => {
+                  const qty = +inp.value;
+                  if (qty > 0) {
+                    lines.push({
+                      id: inp.dataset.dishId,
+                      name: inp.dataset.name,
+                      qty,
+                      unitPrice: +inp.dataset.price,
+                      note: ''
+                    });
+                  }
+                });
+
+                if (!lines.length) {
+                  toast('Please select at least one dish.');
+                  return;
+                }
+
+                const notes = modal.querySelector('#diningNotes').value.trim();
+
+                // Create real order
+                const newOrder = Data.createOrder({
+                  type: 'In-room',
+                  target: `Room ${res.n}`,
+                  resCode: res.c,
+                  lines
+                });
+
+                // Bill directly to room folio
+                Data.billOrder(newOrder.code, 'room');
+
+                closeModal();
+                toast(`Order ${newOrder.code} placed. Charged ${peso(newOrder.subtotal)} to room folio.`);
+                renderCurrentStay();
+              };
+            }
+          }
+        );
+      };
+    }
+
+    // 2. Request Housekeeping
+    const hkBtn = $('btnGpHousekeeping');
+    if (hkBtn) {
+      hkBtn.onclick = () => {
+        showModal(
+          `Request Housekeeping (Room ${res.n})`,
+          `
+          <div class="field">
+            <label for="hkItem">Select Service / Item Needed</label>
+            <select id="hkItem">
+              <option>Fresh Towel Replenishment</option>
+              <option>Extra Feather Pillows</option>
+              <option>Bed Linen Change &amp; Make Up Room</option>
+              <option>Bottled Water &amp; Tea Refill</option>
+              <option>Dental &amp; Toiletry Kit</option>
+              <option>Evening Turndown Service</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="hkNotes">Additional Request Notes</label>
+            <textarea id="hkNotes" rows="2" placeholder="Delivery time, specific item count, etc."></textarea>
+          </div>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn" id="btnSubmitHkReq">Send Request to Housekeeping</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnSubmitHkReq').onclick = () => {
+                const item = modal.querySelector('#hkItem').value;
+                const notes = modal.querySelector('#hkNotes').value.trim();
+                const req = Data.createHkRequest(res.n, res.g, item, notes, res.c);
+                closeModal();
+                toast(`Housekeeping notified (Ref: ${req.id}).`);
+              };
+            }
+          }
+        );
+      };
+    }
+
+    // 3. Report Maintenance Issue
+    const maintBtn = $('btnGpMaintenance');
+    if (maintBtn) {
+      maintBtn.onclick = () => {
+        showModal(
+          `Report a Room Issue (Room ${res.n})`,
+          `
+          <div class="field">
+            <label for="mIssue">Describe the Problem *</label>
+            <textarea id="mIssue" rows="3" placeholder="e.g. AC cooling slowly, bathroom lamp flickering…" required></textarea>
+          </div>
+          <div class="field">
+            <label for="mPriority">Urgency</label>
+            <select id="mPriority">
+              <option value="Low">Low (Can inspect anytime today)</option>
+              <option value="Medium" selected>Medium (Please inspect today)</option>
+              <option value="Urgent">Urgent (Immediate assistance requested)</option>
+            </select>
+          </div>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn" id="btnSubmitMReq">Submit Maintenance Request</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnSubmitMReq').onclick = () => {
+                const issue = modal.querySelector('#mIssue').value.trim();
+                const priority = modal.querySelector('#mPriority').value;
+                if (!issue) {
+                  toast('Please describe the issue.');
+                  return;
+                }
+                const req = Data.createMaintenanceRequest(res.n, issue, priority, false, 'Reported by in-stay guest');
+                closeModal();
+                toast(`Maintenance team dispatched (Ref: ${req.id}).`);
+              };
+            }
+          }
+        );
+      };
+    }
+
+    // 4. Pay Balance Due (Simulated)
+    const payBalBtn = $('btnGpPayBalance');
+    if (payBalBtn) {
+      payBalBtn.onclick = () => {
+        const bal = Data.balOf(res);
+        showModal(
+          `Settle Folio Balance (${peso(bal)})`,
+          `
+          <div class="field">
+            <label for="gpPayMethod">Select Payment Method</label>
+            <select id="gpPayMethod">
+              <option value="Credit card">Credit / Debit Card</option>
+              <option value="GCash">GCash E-Wallet</option>
+              <option value="Maya">Maya E-Wallet</option>
+              <option value="Cash">Cash at Front Desk</option>
+            </select>
+            <span class="field-hint">Simulated payment (no real charge)</span>
+          </div>
+          <div class="field">
+            <label for="gpPayAmount">Amount to Pay</label>
+            <input type="number" id="gpPayAmount" value="${bal}" min="1" max="${bal}">
+          </div>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn" id="btnConfirmGpPayment">Authorize Payment</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnConfirmGpPayment').onclick = () => {
+                const amt = +modal.querySelector('#gpPayAmount').value;
+                const method = modal.querySelector('#gpPayMethod').value;
+                if (amt <= 0 || amt > bal) {
+                  toast('Please enter a valid payment amount.');
+                  return;
+                }
+                const pay = Data.addPayment(res, amt, method, 'Payment', 'Online guest portal folio settlement', {
+                  auth: 'AUTH-' + Math.floor(100000 + Math.random() * 900000),
+                  cardLast4: '8842'
+                });
+                closeModal();
+                toast(`Receipt ${pay.id} recorded · ${peso(amt)} via ${method}`);
+                renderCurrentStay();
+              };
+            }
+          }
+        );
+      };
+    }
+
+    // 5. Express Check-out Flow
+    const checkOutBtn = $('btnGpExpressCheckout');
+    if (checkOutBtn) {
+      checkOutBtn.onclick = () => {
+        const bal = Data.balOf(res);
+        if (bal > 0) {
+          toast(`Please settle outstanding balance of ${peso(bal)} before check-out.`);
+          $('btnGpPayBalance').click();
+          return;
+        }
+
+        showModal(
+          `Express Check-Out Confirmation`,
+          `
+          <p class="text-sm">You are checking out of <b>Room ${res.n}</b> (${esc(res.t)}). Your folio has zero outstanding balance.</p>
+          <p class="text-sm">Keycards may be left on your room desk or deposited at the front desk key return box.</p>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Keep Room</button>
+          <button class="btn" id="btnConfirmCheckout">Confirm Check-Out</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnConfirmCheckout').onclick = () => {
+                res.st = 'Checked-out';
+                Data.syncPaymentStatus(res);
+                Data.setRoomHK(res.n, { s: 'Dirty', p: 'Urgent', a: 0 });
+                Data.updateReservation(res.c, res);
+                Data.audit('Guest express check-out', 'Reservation', res.c, `Checked out Room ${res.n}`);
+                closeModal();
+                toast('Check-out completed. Thank you for staying with us!');
+                renderCurrentStay();
+              };
+            }
+          }
+        );
+      };
+    }
+
+    // 6. Modify Booking
+    const editResBtn = $('btnGpEditRes');
+    if (editResBtn) {
+      editResBtn.onclick = () => {
+        showModal(
+          `Modify Reservation ${res.c}`,
+          `
+          <div class="field-row-2">
+            <div class="field">
+              <label for="editCi">Check-in</label>
+              <input type="date" id="editCi" value="${res.i}" min="${today()}">
+            </div>
+            <div class="field">
+              <label for="editCo">Check-out</label>
+              <input type="date" id="editCo" value="${res.o}">
+            </div>
+          </div>
+          <div class="field-row-2">
+            <div class="field">
+              <label for="editGuests">Guests</label>
+              <input type="number" id="editGuests" value="${res.gu}" min="1">
+            </div>
+            <div class="field">
+              <label for="editPhone">Contact Phone</label>
+              <input type="tel" id="editPhone" value="${esc(res.ph || '')}">
+            </div>
+          </div>
+          <div class="field">
+            <label for="editNotes">Special Requests</label>
+            <textarea id="editNotes" rows="2">${esc(res.note || '')}</textarea>
+          </div>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn" id="btnSaveEditRes">Save Changes</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnSaveEditRes').onclick = () => {
+                const newCi = modal.querySelector('#editCi').value;
+                const newCo = modal.querySelector('#editCo').value;
+                const newGu = +modal.querySelector('#editGuests').value;
+                const newPh = modal.querySelector('#editPhone').value.trim();
+                const newNotes = modal.querySelector('#editNotes').value.trim();
+
+                if (newCo <= newCi) {
+                  toast('Check-out date must be after check-in.');
+                  return;
+                }
+
+                // Verify room availability if dates changed (exclude current reservation res.c)
+                if (newCi !== res.i || newCo !== res.o) {
+                  const free = Data.freeRooms(res.t, newCi, newCo, res.c);
+                  if (!free.length) {
+                    toast('No rooms of this category are available for the new dates.');
+                    return;
+                  }
+                  res.i = newCi;
+                  res.o = newCo;
+                  if (!free.includes(Number(res.n))) {
+                    res.n = free[0];
+                  }
+                }
+
+                res.gu = newGu;
+                res.ph = newPh;
+                res.note = newNotes;
+                Data.syncPaymentStatus(res);
+                Data.updateReservation(res.c, res);
+                window.dispatchEvent(new CustomEvent('pupsj:data-change'));
+
+                closeModal();
+                toast('Reservation updated successfully.');
+                renderCurrentStay();
+              };
+            }
+          }
+        );
+      };
+    }
+  }
+
+  // ─── 2. Tab: My Reservations ───
+  let filterRes = 'all';
+
+  function renderMyReservations() {
+    const container = $('tabMyReservations');
+    if (!container) return;
+
+    const all = Data.getReservations().filter(r =>
+      (guestSession.email && r.email && r.email.toLowerCase() === guestSession.email.toLowerCase()) ||
+      (guestSession.phone && r.ph && r.ph === guestSession.phone)
+    );
+
+    const filtered = all.filter(r => {
+      if (filterRes === 'upcoming') return r.st === 'Confirmed' || r.st === 'Pending';
+      if (filterRes === 'past') return r.st === 'Checked-out';
+      if (filterRes === 'cancelled') return r.st === 'Cancelled';
+      return true;
+    });
+
+    container.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div class="tabs" style="margin-bottom: 0;">
+          <button class="tab-btn ${filterRes === 'all' ? 'active' : ''}" data-rf="all">All (${all.length})</button>
+          <button class="tab-btn ${filterRes === 'upcoming' ? 'active' : ''}" data-rf="upcoming">Upcoming</button>
+          <button class="tab-btn ${filterRes === 'past' ? 'active' : ''}" data-rf="past">Past Stays</button>
+          <button class="tab-btn ${filterRes === 'cancelled' ? 'active' : ''}" data-rf="cancelled">Cancelled</button>
+        </div>
+        <a href="../rooms/rooms-deals.html" class="btn btn-sm">
+          + Book New Stay
+        </a>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;" id="myResList">
+        ${filtered.length ? filtered.map(r => {
+          const nts = Data.nts(r);
+          const total = Data.tot(r);
+          const paid = Data.paidAmt(r);
+          const isCancelled = r.st === 'Cancelled';
+          const isPast = r.st === 'Checked-out';
+
+          // Check if feedback already given
+          const fb = Data.getFeedback().find(f => f.resCode === r.c);
+
+          return `
+            <div class="card">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <b style="font-size: 17px;">${esc(r.t)}</b>
+                    <span class="pill ${r.st === 'Confirmed' ? 'pill--ok' : r.st === 'Pending' ? 'pill--warn' : r.st === 'Checked-in' ? 'pill--info' : isCancelled ? 'pill--bad' : 'pill--muted'}">
+                      ${r.st}
+                    </span>
+                  </div>
+                  <div class="text-sm text-muted" style="margin-top: 2px;">Code: <b>${r.c}</b> &middot; Room ${r.n || 'TBD'}</div>
+                </div>
+                <div style="text-align: right;">
+                  <b style="font-size: 16px; color: var(--gold-ink);">${peso(total)}</b>
+                  <div class="text-sm text-muted">${peso(paid)} paid</div>
+                </div>
+              </div>
+
+              <div class="text-sm" style="color: var(--ink-2); margin-bottom: 14px;">
+                Dates: <b>${fmtDate(r.i)}</b> &rarr; <b>${fmtDate(r.o)}</b> (${nts} nights &middot; ${r.gu} guests)
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn-secondary btn-sm" onclick="printTaxInvoice('${r.c}')">
+                    <span class="ic" data-icon="print">[ICON: print]</span> Tax Folio
+                  </button>
+                  ${(!isCancelled && !isPast && r.st !== 'Checked-in') ? `
+                    <button class="btn-danger btn-sm" data-cancel-code="${r.c}">
+                      Cancel
+                    </button>
+                  ` : ''}
+                  ${isPast && !fb ? `
+                    <button class="btn btn-sm" data-feedback-code="${r.c}">
+                      <span class="ic" data-icon="star-filled">[ICON: star-filled]</span> Leave Review
+                    </button>
+                  ` : ''}
+                  ${fb ? `<span class="pill pill--ok text-sm">Review Submitted (${fb.ratingOverall}/5)</span>` : ''}
+                </div>
+
+                <a href="../rooms/rooms-deals.html" class="btn-ghost btn-sm">
+                  Book Again &rarr;
+                </a>
+              </div>
+            </div>
+          `;
+        }).join('') : `
+          <div class="empty-state">
+            <p class="empty-state-text">No reservations matching this filter.</p>
+          </div>
+        `}
+      </div>
+    `;
+
+    // Filter clicks
+    container.querySelectorAll('[data-rf]').forEach(btn => {
+      btn.onclick = () => {
+        filterRes = btn.dataset.rf;
+        renderMyReservations();
+      };
+    });
+
+    // Cancel reservation flow
+    container.querySelectorAll('[data-cancel-code]').forEach(btn => {
+      btn.onclick = () => {
+        const c = btn.dataset.cancelCode;
+        const res = Data.findRes(c);
+        if (!res) return;
+
+        const paid = Data.paidAmt(res);
+        const daysToArrival = dateDiff(today(), res.i);
+        const freeCancel = daysToArrival >= CONFIG.freeCancelDays;
+        const cancelFee = freeCancel ? 0 : Math.min(paid, res.rt || 3200);
+        const refundAmt = Math.max(0, paid - cancelFee);
+
+        showModal(
+          `Cancel Reservation ${res.c}`,
+          `
+          <p class="text-sm">Are you sure you wish to cancel this reservation for <b>${esc(res.t)}</b>?</p>
+          <div class="card card-sm" style="background-color: var(--surface-2); margin: 12px 0; font-size: 13px;">
+            <div><b>Arrival Date:</b> ${fmtDate(res.i)} (${daysToArrival} days away)</div>
+            <div><b>Total Paid:</b> ${peso(paid)}</div>
+            <div><b>Cancellation Terms:</b> ${freeCancel ? 'Eligible for 100% free cancellation' : 'Late cancellation retains 1st night rate'}</div>
+            <div style="border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px;">
+              <b>Estimated Refund:</b> <span class="text-ok" style="font-size: 15px; font-weight: 700;">${peso(refundAmt)}</span>
+            </div>
+          </div>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Keep Booking</button>
+          <button class="btn-danger" id="btnConfirmCancel">Confirm Cancellation</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnConfirmCancel').onclick = () => {
+                const cancelRes = Data.cancelReservation(res.c, 'Guest');
+                closeModal();
+                toast(`Reservation ${res.c} cancelled. ${peso(cancelRes.refundAmt)} refunded.`);
+                renderMyReservations();
+              };
+            }
+          }
+        );
+      };
+    });
+
+    // Leave review flow
+    container.querySelectorAll('[data-feedback-code]').forEach(btn => {
+      btn.onclick = () => {
+        const c = btn.dataset.feedbackCode;
+        const res = Data.findRes(c);
+        if (!res) return;
+
+        showModal(
+          `Guest Review for Stay (${esc(res.t)})`,
+          `
+          <div class="field">
+            <label for="fbOverall">Overall Rating</label>
+            <select id="fbOverall">
+              <option value="5" selected>5 Stars – Exceptional</option>
+              <option value="4">4 Stars – Very Good</option>
+              <option value="3">3 Stars – Average</option>
+              <option value="2">2 Stars – Poor</option>
+              <option value="1">1 Star – Unsatisfactory</option>
+            </select>
+          </div>
+          <div class="field-row-2">
+            <div class="field">
+              <label for="fbClean">Cleanliness (1–5)</label>
+              <input type="number" id="fbClean" min="1" max="5" value="5">
+            </div>
+            <div class="field">
+              <label for="fbStaff">Staff Service (1–5)</label>
+              <input type="number" id="fbStaff" min="1" max="5" value="5">
+            </div>
+          </div>
+          <div class="field">
+            <label for="fbComment">Your Review Comments *</label>
+            <textarea id="fbComment" rows="3" placeholder="Tell us about the room comfort, dining, and hospitality…" required></textarea>
+          </div>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn" id="btnSubmitFeedback">Publish Review</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnSubmitFeedback').onclick = () => {
+                const comment = modal.querySelector('#fbComment').value.trim();
+                if (!comment) {
+                  toast('Please provide a comment.');
+                  return;
+                }
+                const overall = +modal.querySelector('#fbOverall').value;
+                const clean = +modal.querySelector('#fbClean').value;
+                const staff = +modal.querySelector('#fbStaff').value;
+
+                Data.createFeedback({
+                  resCode: res.c,
+                  guestName: res.g,
+                  roomType: res.t,
+                  ratingOverall: overall,
+                  ratingCleanliness: clean,
+                  ratingStaff: staff,
+                  ratingComfort: overall,
+                  ratingDining: overall,
+                  ratingValue: overall,
+                  comment
+                });
+
+                closeModal();
+                toast('Thank you for your review! Our management appreciates your feedback.');
+                renderMyReservations();
+              };
+            }
+          }
+        );
+      };
+    });
+  }
+
+  // ─── 3. Tab: Loyalty & Rewards ───
+  function renderLoyalty() {
+    const container = $('tabLoyaltyRewards');
+    if (!container) return;
+
+    const nights = Data.getGuestNights(guestSession.name);
+    const tier = Data.getGuestTier(nights);
+    const tiers = CONFIG.loyalty.tiers;
+    const rewards = CONFIG.loyalty.rewards;
+
+    // Real loyalty points ledger
+    const points = Data.getLoyaltyPoints ? Data.getLoyaltyPoints(guestSession.name) : 0;
+
+    container.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 24px;" class="grid-2">
+        <!-- Membership Status Card -->
+        <div class="card" style="text-align: center;">
+          <span class="site-section-tag">TIER MEMBERSHIP</span>
+          <h2 style="font-size: 32px; margin: 4px 0;">${esc(tier.name)}</h2>
+          <div class="text-sm text-muted" style="margin-bottom: 16px;">Based on ${nights} completed nights</div>
+
+          <div style="background-color: var(--surface-2); padding: 14px; border-radius: var(--r); margin-bottom: 16px; border: 1px solid var(--line);">
+            <div class="text-sm text-muted">Available Rewards Points</div>
+            <div style="font-size: 32px; font-weight: 700; color: var(--gold-ink); margin-top: 4px;">${points}</div>
+          </div>
+
+          <button class="btn-secondary btn-sm btn-block" id="btnToggleTierPerks">
+            View All Tier Benefits &darr;
+          </button>
+        </div>
+
+        <!-- Collapsible Tier Levels -->
+        <div class="card" id="tierPerksCard" style="display: none;">
+          <h3 style="margin-bottom: 14px;">PUPSJ Loyalty Tier Program</h3>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            ${tiers.map(t => `
+              <div style="border-bottom: 1px solid var(--line); padding-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                  <b style="color: ${t.name === tier.name ? 'var(--gold-ink)' : 'var(--ink)'}; font-size: 15px;">
+                    ${esc(t.name)} Member ${t.name === tier.name ? '(Current Tier)' : ''}
+                  </b>
+                  <span class="text-sm text-muted">${t.minNights}+ Nights</span>
+                </div>
+                <div class="text-sm" style="color: var(--ink-2); margin-top: 4px;">
+                  ${t.perks.map(p => `&bull; ${esc(p)}`).join(' &nbsp; ')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Available Redeemable Rewards -->
+      <div class="card">
+        <h3 style="margin-bottom: 6px;">Redeemable Stay &amp; Dining Rewards</h3>
+        <p class="text-sm text-muted" style="margin-bottom: 18px;">Points are deducted upon claiming. A staff voucher request will be issued.</p>
+
+        <div class="grid-2">
+          ${rewards.map(r => `
+            <div class="card card-sm" style="background-color: var(--surface-2); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <b>${esc(r.name)}</b>
+                <div class="text-sm text-gold" style="font-weight: 600; margin-top: 2px;">${r.points} Points</div>
+              </div>
+              <button class="btn btn-sm" data-redeem-id="${r.id}" data-redeem-cost="${r.points}" data-redeem-name="${esc(r.name)}" ${points >= r.points ? '' : 'disabled'}>
+                ${points >= r.points ? 'Redeem' : 'Need Points'}
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    // Tier perks toggle
+    const toggleBtn = $('btnToggleTierPerks');
+    const perksCard = $('tierPerksCard');
+    if (toggleBtn && perksCard) {
+      toggleBtn.onclick = () => {
+        const isHidden = perksCard.style.display === 'none';
+        perksCard.style.display = isHidden ? 'block' : 'none';
+        toggleBtn.textContent = isHidden ? 'Hide Tier Benefits ↑' : 'View All Tier Benefits ↓';
+      };
+    }
+
+    // Reward redemption
+    container.querySelectorAll('[data-redeem-id]').forEach(btn => {
+      btn.onclick = () => {
+        const name = btn.dataset.redeemName;
+        const cost = +btn.dataset.redeemCost;
+        const rwdId = btn.dataset.redeemId;
+
+        showModal(
+          `Redeem ${esc(name)}`,
+          `
+          <p class="text-sm">Are you sure you want to redeem <b>${esc(name)}</b> for <b>${cost} points</b>?</p>
+          <p class="text-sm text-muted">Points will be deducted from your loyalty ledger and a staff voucher request will be notified to the front desk.</p>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn" id="btnConfirmRedeem">Confirm Redemption</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnConfirmRedeem').onclick = () => {
+                const rwdRes = Data.redeemLoyalty ? Data.redeemLoyalty(guestSession.name, rwdId) : { success: true };
+                if (!rwdRes.success) {
+                  toast(rwdRes.error || 'Unable to redeem reward', 'bad');
+                  return;
+                }
+                closeModal();
+                toast(`Voucher issued for ${name}! Deducted ${cost} points. Please present to front desk.`);
+                renderLoyalty();
+              };
+            }
+          }
+        );
+      };
+    });
+  }
+
+  // ─── 4. Tab: Messages & Staff Inbox ───
+  function renderMessages() {
+    const container = $('tabMessages');
+    if (!container) return;
+
+    const threads = Data.getThreads().filter(t =>
+      t.guestName.toLowerCase() === guestSession.name.toLowerCase() ||
+      (t.contact && t.contact.toLowerCase() === (guestSession.email || '').toLowerCase())
+    );
+
+    container.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;" class="grid-2">
+        <!-- Thread List -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="margin: 0;">Conversations</h3>
+            <button class="btn-secondary btn-sm" id="btnNewThread">+ New Message</button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;" id="guestThreadList">
+            ${threads.length ? threads.map((t, idx) => `
+              <div class="card card-sm ${idx === 0 ? 'selected-thread' : ''}" style="cursor: pointer; background-color: var(--surface);" data-thread-id="${t.id}">
+                <div style="display: flex; justify-content: space-between;">
+                  <b>${esc(t.subject)}</b>
+                  <span class="pill ${t.status === 'Open' ? 'pill--ok' : 'pill--muted'}" style="font-size: 10px;">${t.status}</span>
+                </div>
+                <div class="text-sm text-muted" style="margin-top: 4px;">Last update: ${esc(t.updated)}</div>
+              </div>
+            `).join('') : '<div class="text-sm text-muted">No messages yet. Send a inquiry to front desk.</div>'}
+          </div>
+        </div>
+
+        <!-- Conversation View -->
+        <div class="card" id="guestThreadView" style="display: flex; flex-direction: column; min-height: 400px;">
+          ${threads.length ? renderThreadMessages(threads[0]) : `
+            <div class="empty-state" style="margin: auto;">
+              <p class="empty-state-text">Select or start a conversation with the front desk.</p>
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+
+    function renderThreadMessages(thread) {
+      return `
+        <div class="card-header" style="margin-bottom: 12px;">
+          <div>
+            <h3 style="margin: 0; font-size: 17px;">${esc(thread.subject)}</h3>
+            <small class="text-muted">Thread: ${thread.id} &middot; Status: ${thread.status}</small>
+          </div>
+        </div>
+
+        <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 10px 0;" id="threadMsgBox">
+          ${(thread.messages || []).map(m => `
+            <div style="max-width: 80%; padding: 8px 12px; border-radius: var(--r); font-size: 13px; ${m.role === 'guest' ? 'align-self: flex-end; background-color: var(--gold-tint); border: 1px solid var(--line);' : 'align-self: flex-start; background-color: var(--surface-2);'}">
+              <b>${esc(m.sender)}</b> <span class="text-sm text-muted">(${esc(m.time)})</span>
+              <div style="margin-top: 4px;">${esc(m.text)}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <form id="threadReplyForm" style="display: flex; gap: 8px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px;">
+          <input type="text" id="threadReplyInput" placeholder="Reply to front desk…" required style="height: 38px;">
+          <button type="submit" class="btn btn-sm">Send</button>
+        </form>
+      `;
+    }
+
+    // Attach reply handler
+    function bindReply(thread) {
+      const replyForm = $('threadReplyForm');
+      if (replyForm) {
+        replyForm.onsubmit = e => {
+          e.preventDefault();
+          const txt = $('threadReplyInput').value.trim();
+          if (!txt) return;
+          Data.replyThread(thread.id, guestSession.name, txt, 'guest');
+          $('threadReplyInput').value = '';
+          const updated = Data.getThreads().find(t => t.id === thread.id);
+          $('guestThreadView').innerHTML = renderThreadMessages(updated);
+          bindReply(updated);
+        };
+      }
+    }
+
+    if (threads.length) bindReply(threads[0]);
+
+    // Thread selection
+    container.querySelectorAll('[data-thread-id]').forEach(card => {
+      card.onclick = () => {
+        const id = card.dataset.threadId;
+        const thread = threads.find(t => t.id === id);
+        if (thread) {
+          $('guestThreadView').innerHTML = renderThreadMessages(thread);
+          bindReply(thread);
+        }
+      };
+    });
+
+    // New thread
+    const newBtn = $('btnNewThread');
+    if (newBtn) {
+      newBtn.onclick = () => {
+        showModal(
+          'Send Message to Front Desk',
+          `
+          <div class="field">
+            <label for="newSubject">Subject *</label>
+            <input type="text" id="newSubject" placeholder="e.g. Airport Transfer or Room Preference" required>
+          </div>
+          <div class="field">
+            <label for="newMsgText">Message *</label>
+            <textarea id="newMsgText" rows="3" placeholder="Describe your question or request…" required></textarea>
+          </div>
+          `,
+          `
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn" id="btnSubmitNewThread">Send Message</button>
+          `,
+          {
+            onOpen(modal) {
+              modal.querySelector('#btnSubmitNewThread').onclick = () => {
+                const sub = modal.querySelector('#newSubject').value.trim();
+                const txt = modal.querySelector('#newMsgText').value.trim();
+                if (!sub || !txt) {
+                  toast('Please fill in subject and message.');
+                  return;
+                }
+                Data.createThread(sub, guestSession.name, txt, '', guestSession.email);
+                closeModal();
+                toast('Message sent to front desk.');
+                renderMessages();
+              };
+            }
+          }
+        );
+      };
+    }
+  }
+
+  // ─── 5. Tab: Profile ───
+  let isEditingProfile = false;
+
+  function renderProfile() {
+    const container = $('tabProfile');
+    if (!container) return;
+
+    const guestProfiles = store.get('guestProfiles', {});
+    const emailKey = (guestSession.email || guestSession.phone || 'default').toLowerCase();
+    const prof = guestProfiles[emailKey] || {
+      name: guestSession.name,
+      email: guestSession.email || '',
+      phone: guestSession.phone || '',
+      address: 'San Juan City, Metro Manila',
+      bedPref: '1 King Size Bed',
+      dietary: 'Standard menu',
+      cardBrand: 'Visa',
+      cardLast4: '8842'
+    };
+
+    container.innerHTML = `
+      <div class="card" style="max-width: 680px; margin: 0 auto;">
+        <div class="card-header">
+          <h3>Guest Profile &amp; Preferences</h3>
+          <button class="btn-secondary btn-sm" id="btnToggleEditProfile">
+            ${isEditingProfile ? 'Cancel' : 'Edit Profile'}
+          </button>
+        </div>
+
+        ${isEditingProfile ? `
+          <form id="profileEditForm">
+            <div class="field-row-2">
+              <div class="field">
+                <label for="profName">Full Name</label>
+                <input type="text" id="profName" value="${esc(prof.name)}" required>
+              </div>
+              <div class="field">
+                <label for="profPhone">Mobile Phone</label>
+                <input type="tel" id="profPhone" value="${esc(prof.phone)}" required>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="profEmail">Email Address</label>
+              <input type="email" id="profEmail" value="${esc(prof.email)}" required>
+            </div>
+
+            <div class="field">
+              <label for="profAddress">Residential Address</label>
+              <input type="text" id="profAddress" value="${esc(prof.address)}">
+            </div>
+
+            <div class="field-row-2">
+              <div class="field">
+                <label for="profBed">Bed Preference</label>
+                <select id="profBed">
+                  <option ${prof.bedPref === '1 King Size Bed' ? 'selected' : ''}>1 King Size Bed</option>
+                  <option ${prof.bedPref === '2 Twin Beds' ? 'selected' : ''}>2 Twin Beds</option>
+                  <option ${prof.bedPref === 'Quiet Corner Room' ? 'selected' : ''}>Quiet Corner Room</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="profDiet">Dietary Preferences</label>
+                <input type="text" id="profDiet" value="${esc(prof.dietary)}">
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+              <button type="button" class="btn-secondary" id="btnCancelEditProf">Cancel</button>
+              <button type="submit" class="btn" id="btnSaveProfile">Save Profile Changes</button>
+            </div>
+          </form>
+        ` : `
+          <div style="display: flex; flex-direction: column; gap: 14px; font-size: 14px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 10px;">
+              <div>
+                <span class="text-sm text-muted">Primary Guest Name:</span>
+                <div style="font-weight: 600; margin-top: 2px;">${esc(prof.name)}</div>
+              </div>
+              <div>
+                <span class="text-sm text-muted">Contact Mobile:</span>
+                <div style="font-weight: 600; margin-top: 2px;">${esc(prof.phone || 'None on file')}</div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 10px;">
+              <div>
+                <span class="text-sm text-muted">Email Address:</span>
+                <div style="font-weight: 600; margin-top: 2px;">${esc(prof.email || 'None on file')}</div>
+              </div>
+              <div>
+                <span class="text-sm text-muted">Residential Address:</span>
+                <div style="font-weight: 600; margin-top: 2px;">${esc(prof.address)}</div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 10px;">
+              <div>
+                <span class="text-sm text-muted">Bed Preference:</span>
+                <div style="margin-top: 2px;">${esc(prof.bedPref)}</div>
+              </div>
+              <div>
+                <span class="text-sm text-muted">Dietary Preferences:</span>
+                <div style="margin-top: 2px;">${esc(prof.dietary)}</div>
+              </div>
+            </div>
+
+            <div>
+              <span class="text-sm text-muted">Payment Method on File:</span>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                <span class="pill pill--muted">${esc(prof.cardBrand || 'Card')}</span>
+                <span>Ending in &bull;&bull;&bull;&bull; ${esc(prof.cardLast4 || '8842')}</span>
+              </div>
+            </div>
+          </div>
+        `}
+      </div>
+    `;
+
+    const toggleBtn = $('btnToggleEditProfile');
+    if (toggleBtn) {
+      toggleBtn.onclick = () => {
+        isEditingProfile = !isEditingProfile;
+        renderProfile();
+      };
+    }
+
+    const cancelBtn = $('btnCancelEditProf');
+    if (cancelBtn) {
+      cancelBtn.onclick = () => {
+        isEditingProfile = false;
+        renderProfile();
+      };
+    }
+
+    const form = $('profileEditForm');
+    if (form) {
+      form.onsubmit = e => {
+        e.preventDefault();
+        prof.name = $('profName').value.trim();
+        prof.phone = $('profPhone').value.trim();
+        prof.email = $('profEmail').value.trim();
+        prof.address = $('profAddress').value.trim();
+        prof.bedPref = $('profBed').value;
+        prof.dietary = $('profDiet').value.trim();
+
+        guestProfiles[emailKey] = prof;
+        store.set('guestProfiles', guestProfiles, true);
+
+        // Update active session
+        guestSession.name = prof.name;
+        guestSession.email = prof.email;
+        guestSession.phone = prof.phone;
+        Data.setGuestSession(guestSession);
+
+        isEditingProfile = false;
+        toast('Profile updated successfully.');
+        renderProfile();
+      };
+    }
+  }
+
+  // Initial tab render
+  switchTab(activeTabKey);
+})();

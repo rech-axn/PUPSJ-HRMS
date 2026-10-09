@@ -1,0 +1,246 @@
+{
+  "pages/auth/guest-login.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/guest/guest-portal.html": {
+    "iconCount": 5,
+    "imgCount": 0
+  },
+  "pages/guest/guests.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/main/about.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/main/contact.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/main/home.html": {
+    "iconCount": 1,
+    "imgCount": 0
+  },
+  "pages/main/menu.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/main/privacy.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/main/terms.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/audit.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/dashboard.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/employees.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/feedback.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/guests.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/housekeeping.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/inquiries.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/kitchen.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/maintenance.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/menu.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/messages.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/orders.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/payments.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/promotions.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/reports.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/reservations.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/management/tables.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/rooms/rooms-deals.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/rooms/rooms.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "pages/rooms/roomtypes.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "index.html": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "js/about.js": {
+    "iconCount": 2,
+    "imgCount": 0
+  },
+  "js/audit.js": {
+    "iconCount": 2,
+    "imgCount": 0
+  },
+  "js/booking-modal.js": {
+    "iconCount": 4,
+    "imgCount": 0
+  },
+  "js/contact.js": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "js/core.js": {
+    "iconCount": 2,
+    "imgCount": 1
+  },
+  "js/dashboard.js": {
+    "iconCount": 8,
+    "imgCount": 0
+  },
+  "js/data.js": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "js/employees.js": {
+    "iconCount": 2,
+    "imgCount": 0
+  },
+  "js/feedback.js": {
+    "iconCount": 1,
+    "imgCount": 0
+  },
+  "js/guest-login.js": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "js/guest-portal.js": {
+    "iconCount": 8,
+    "imgCount": 0
+  },
+  "js/guests.js": {
+    "iconCount": 9,
+    "imgCount": 0
+  },
+  "js/home.js": {
+    "iconCount": 1,
+    "imgCount": 1
+  },
+  "js/housekeeping.js": {
+    "iconCount": 6,
+    "imgCount": 0
+  },
+  "js/inquiries.js": {
+    "iconCount": 2,
+    "imgCount": 0
+  },
+  "js/kitchen.js": {
+    "iconCount": 1,
+    "imgCount": 0
+  },
+  "js/maintenance.js": {
+    "iconCount": 2,
+    "imgCount": 0
+  },
+  "js/menu-mgmt.js": {
+    "iconCount": 2,
+    "imgCount": 0
+  },
+  "js/menu.js": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "js/messages.js": {
+    "iconCount": 0,
+    "imgCount": 0
+  },
+  "js/orders.js": {
+    "iconCount": 7,
+    "imgCount": 0
+  },
+  "js/payments.js": {
+    "iconCount": 4,
+    "imgCount": 0
+  },
+  "js/promotions.js": {
+    "iconCount": 1,
+    "imgCount": 0
+  },
+  "js/reports.js": {
+    "iconCount": 2,
+    "imgCount": 0
+  },
+  "js/reservations.js": {
+    "iconCount": 9,
+    "imgCount": 0
+  },
+  "js/rooms-deals.js": {
+    "iconCount": 0,
+    "imgCount": 2
+  },
+  "js/rooms.js": {
+    "iconCount": 3,
+    "imgCount": 0
+  },
+  "js/roomtypes.js": {
+    "iconCount": 3,
+    "imgCount": 1
+  },
+  "js/site-shell.js": {
+    "iconCount": 13,
+    "imgCount": 0
+  },
+  "js/staff-shell.js": {
+    "iconCount": 12,
+    "imgCount": 0
+  },
+  "js/tables.js": {
+    "iconCount": 4,
+    "imgCount": 0
+  }
+}

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact Us – PUPSJ Hotel &amp; Restaurant</title>
+  <meta name="description" content="Get in touch with PUPSJ Hotel &amp; Restaurant front desk, dining inquiries, and event reservations.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/site.css">
+</head>
+<body>
+  <!-- Public Top Navigation -->
+  <header class="site-header">
+    <nav id="siteNav"></nav>
+  </header>
+
+  <!-- Page Header -->
+  <header class="site-section" style="background-color: var(--surface); border-bottom: 1px solid var(--line); padding: var(--s6) 0;">
+    <div class="site-container" style="text-align: center; max-width: 760px;">
+      <span class="site-section-tag">COMMUNICATIONS &amp; FRONT DESK</span>
+      <h1>Contact PUPSJ Hotel &amp; Restaurant</h1>
+      <p style="margin-top: 12px;">
+        Reach our front desk, banquet inquiries, or guest services team. We are available 24 hours daily.
+      </p>
+    </div>
+  </header>
+
+  <main>
+    <section class="site-section">
+      <div class="site-container">
+        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 40px; align-items: start;" class="grid-2">
+          <!-- Direct Communications Column -->
+          <div>
+            <span class="site-section-tag">DIRECT COMMUNICATIONS</span>
+            <h2 style="margin-bottom: 16px;">Get in Touch</h2>
+            <p style="font-size: 14px; line-height: 1.7; margin-bottom: 24px;">
+              Our front desk is staffed around the clock to assist with inquiries, reservations, and stay coordination.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="card card-sm">
+                <b>Hotel Address</b>
+                <p class="text-sm" style="margin-top: 4px;" id="contactAddressText"></p>
+              </div>
+
+              <div class="card card-sm">
+                <b>Front Desk Telephone</b>
+                <p class="text-sm" style="margin-top: 4px;" id="contactPhoneText"></p>
+              </div>
+
+              <div class="card card-sm">
+                <b>Email Contacts</b>
+                <p class="text-sm" style="margin-top: 4px;" id="contactEmailText"></p>
+              </div>
+
+              <div class="card card-sm">
+                <b>Front Desk Hours &amp; Parking</b>
+                <p class="text-sm" style="margin-top: 4px;">
+                  Open 24/7 &middot; Complimentary valet and garage parking available for all hotel visitors and diners.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Form Column -->
+          <div class="card">
+            <h3 style="margin-bottom: 6px;">Send an Inquiry</h3>
+            <p class="text-sm text-muted" style="margin-bottom: 20px;" id="contactResponsePromiseText"></p>
+
+            <form id="contactInquiryForm">
+              <div class="field">
+                <label for="cName">Your Full Name *</label>
+                <input type="text" id="cName" placeholder="e.g. Juan Dela Cruz" required autocomplete="name">
+              </div>
+
+              <div class="field-row-2">
+                <div class="field">
+                  <label for="cEmail">Email Address *</label>
+                  <input type="email" id="cEmail" placeholder="juan@example.com" required autocomplete="email">
+                </div>
+                <div class="field">
+                  <label for="cPhone">Mobile Phone *</label>
+                  <input type="tel" id="cPhone" placeholder="+63 917 000 0000" required autocomplete="tel">
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="cType">Nature of Inquiry</label>
+                <select id="cType">
+                  <option>Room Reservation &amp; Stay Inquiry</option>
+                  <option>Restaurant &amp; Dining Inquiry</option>
+                  <option>Meeting, Banquet &amp; Event Booking</option>
+                  <option>Billing, Official Invoice &amp; Folio Assistance</option>
+                  <option>General Hotel Information</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="cMsg">Your Message *</label>
+                <textarea id="cMsg" rows="4" placeholder="Please describe your dates, party size, or specific requirements…" required></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-block" style="margin-top: 10px;" id="btnSubmitContact">
+                Submit Inquiry &rarr;
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Location Map -->
+        <div style="margin-top: 50px;">
+          <div class="site-section-header">
+            <span class="site-section-tag">MAP &amp; DIRECTIONS</span>
+            <h2>Our Location in San Juan City</h2>
+            <p>Easily accessible from major roads in Metro Manila.</p>
+          </div>
+
+          <div style="border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); height: 360px;">
+            <iframe title="Map of PUPSJ Hotel &amp; Restaurant" loading="lazy" referrerpolicy="no-referrer-when-downgrade" style="width: 100%; height: 100%; border: 0;" src="https://maps.google.com/maps?q=Polytechnic+University+of+the+Philippines+San+Juan&amp;output=embed"></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="siteFooter"></footer>
+
+  <script src="../../js/core.js"></script>
+  <script src="../../js/data.js"></script>
+  <script src="../../js/site-shell.js"></script>
+  <script src="../../js/contact.js"></script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+{
+  "index.html": [],
+  "pages/auth/guest-login.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/site-shell.js",
+    "../../js/guest-login.js"
+  ],
+  "pages/guest/guest-portal.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/site-shell.js",
+    "../../js/booking-modal.js",
+    "../../js/guest-portal.js"
+  ],
+  "pages/guest/guests.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/booking-modal.js",
+    "../../js/guests.js"
+  ],
+  "pages/main/about.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/site-shell.js",
+    "../../js/about.js"
+  ],
+  "pages/main/contact.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/site-shell.js",
+    "../../js/contact.js"
+  ],
+  "pages/main/home.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/site-shell.js",
+    "../../js/booking-modal.js",
+    "../../js/home.js"
+  ],
+  "pages/main/menu.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/site-shell.js",
+    "../../js/menu.js"
+  ],
+  "pages/main/privacy.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/site-shell.js"
+  ],
+  "pages/main/terms.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/site-shell.js"
+  ],
+  "pages/management/audit.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/audit.js"
+  ],
+  "pages/management/dashboard.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/dashboard.js"
+  ],
+  "pages/management/employees.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/employees.js"
+  ],
+  "pages/management/feedback.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/feedback.js"
+  ],
+  "pages/management/housekeeping.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/housekeeping.js"
+  ],
+  "pages/management/inquiries.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/inquiries.js"
+  ],
+  "pages/management/kitchen.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/kitchen.js"
+  ],
+  "pages/management/maintenance.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/maintenance.js"
+  ],
+  "pages/management/menu.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/menu-mgmt.js"
+  ],
+  "pages/management/messages.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/messages.js"
+  ],
+  "pages/management/orders.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/orders.js"
+  ],
+  "pages/management/payments.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/booking-modal.js",
+    "../../js/payments.js"
+  ],
+  "pages/management/promotions.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/promotions.js"
+  ],
+  "pages/management/reports.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/reports.js"
+  ],
+  "pages/management/reservations.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/booking-modal.js",
+    "../../js/reservations.js"
+  ],
+  "pages/management/tables.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/tables.js"
+  ],
+  "pages/rooms/rooms-deals.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/site-shell.js",
+    "../../js/booking-modal.js",
+    "../../js/rooms-deals.js"
+  ],
+  "pages/rooms/rooms.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/booking-modal.js",
+    "../../js/rooms.js"
+  ],
+  "pages/rooms/roomtypes.html": [
+    "../../js/core.js",
+    "../../js/data.js",
+    "../../js/staff-shell.js",
+    "../../js/roomtypes.js"
+  ]
+}

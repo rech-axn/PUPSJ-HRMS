@@ -35,8 +35,7 @@
     if (!app) return;
 
     const orders = Data.getOrders();
-    const activeKitchen = orders.filter(o => ['New', 'Preparing', 'Ready'].includes(o.status));
-    const awaitingPayment = orders.filter(o => o.status === 'Served' && o.payStatus !== 'Paid' && o.payStatus !== 'Room folio');
+    const unpaidOrders = orders.filter(o => o.payStatus !== 'Paid' && o.payStatus !== 'Room folio' && o.status !== 'Paid' && o.status !== 'Charged to room' && o.status !== 'Cancelled');
     const settledOrders = orders.filter(o => o.payStatus === 'Paid' || o.payStatus === 'Room folio' || o.status === 'Paid' || o.status === 'Charged to room');
     const todaySales = settledOrders
       .filter(o => (o.created || '').slice(0, 10) === today())
@@ -45,13 +44,10 @@
     app.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
         <div>
-          <span class="site-section-tag">RESTAURANT &amp; BAR</span>
+          <span class="site-section-tag">RESTAURANT</span>
           <h1 style="font-size: 28px; margin: 4px 0 0 0;">Food &amp; Beverage Orders &amp; POS</h1>
         </div>
         <div style="display: flex; gap: 8px;">
-          <a class="btn-secondary" href="kitchen.html">
-            <span class="ic" data-icon="kitchen">[ICON: kitchen]</span> Kitchen Display (KDS)
-          </a>
           <button type="button" class="btn-secondary" id="btnExportOrdersCSV">
             <span class="ic" data-icon="download">[ICON: download]</span> Export CSV
           </button>
@@ -64,16 +60,16 @@
       <!-- KPI Stat Cards -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
         <div class="card kpi-card" style="padding: 16px;">
-          <div class="text-sm text-secondary">Active in Kitchen</div>
-          <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--warn); margin-top: 4px;">${activeKitchen.length}</div>
-        </div>
-        <div class="card kpi-card" style="padding: 16px;">
-          <div class="text-sm text-secondary">Awaiting Settlement</div>
-          <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--info); margin-top: 4px;">${awaitingPayment.length}</div>
+          <div class="text-sm text-secondary">Awaiting Payment</div>
+          <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--warn); margin-top: 4px;">${unpaidOrders.length}</div>
         </div>
         <div class="card kpi-card" style="padding: 16px;">
           <div class="text-sm text-secondary">Settled Today</div>
           <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--ok); margin-top: 4px;">${settledOrders.filter(o => (o.created || '').slice(0, 10) === today()).length}</div>
+        </div>
+        <div class="card kpi-card" style="padding: 16px;">
+          <div class="text-sm text-secondary">Total Settled</div>
+          <div style="font-size: 26px; font-weight: 600; font-family: 'Cormorant Garamond', serif; color: var(--gold-ink); margin-top: 4px;">${settledOrders.length}</div>
         </div>
         <div class="card kpi-card" style="padding: 16px;">
           <div class="text-sm text-secondary">Today's POS Sales</div>
@@ -86,11 +82,8 @@
         <button type="button" class="tab-btn ${activeTab === 'all' ? 'active' : ''}" data-tab="all">
           All Orders (${orders.length})
         </button>
-        <button type="button" class="tab-btn ${activeTab === 'kitchen' ? 'active' : ''}" data-tab="kitchen">
-          <span class="ic" data-icon="kitchen">[ICON: kitchen]</span> Active Kitchen (${activeKitchen.length})
-        </button>
         <button type="button" class="tab-btn ${activeTab === 'unpaid' ? 'active' : ''}" data-tab="unpaid">
-          <span class="ic" data-icon="wallet">[ICON: wallet]</span> Awaiting Payment (${awaitingPayment.length})
+          <span class="ic" data-icon="wallet">[ICON: wallet]</span> Awaiting Payment (${unpaidOrders.length})
         </button>
         <button type="button" class="tab-btn ${activeTab === 'settled' ? 'active' : ''}" data-tab="settled">
           <span class="ic" data-icon="receipt">[ICON: receipt]</span> Settled (${settledOrders.length})
@@ -133,7 +126,7 @@
                 <th>Dishes Ordered</th>
                 <th>Total Bill</th>
                 <th>Time Placed</th>
-                <th>Status &amp; Billing</th>
+                <th>Billing Status</th>
                 <th style="text-align: right;">Administrative Actions</th>
               </tr>
             </thead>
@@ -185,12 +178,11 @@
       if (typeFilter && o.type !== typeFilter) return false;
 
       // Tab filtering
-      if (activeTab === 'kitchen') {
-        if (!['New', 'Preparing', 'Ready'].includes(o.status)) return false;
-      } else if (activeTab === 'unpaid') {
-        if (o.status !== 'Served' || o.payStatus === 'Paid' || o.payStatus === 'Room folio' || o.status === 'Cancelled') return false;
+      const isSettled = (o.payStatus === 'Paid' || o.payStatus === 'Room folio' || o.status === 'Paid' || o.status === 'Charged to room');
+      if (activeTab === 'unpaid') {
+        if (isSettled || o.status === 'Cancelled') return false;
       } else if (activeTab === 'settled') {
-        if (o.payStatus !== 'Paid' && o.payStatus !== 'Room folio' && o.status !== 'Paid' && o.status !== 'Charged to room') return false;
+        if (!isSettled) return false;
       } else if (activeTab === 'cancelled') {
         if (o.status !== 'Cancelled') return false;
       }
@@ -226,16 +218,15 @@
       const orderTotal = o.subtotal != null ? o.subtotal : (o.lines || []).reduce((sum, l) => sum + (l.qty * (l.unitPrice || l.price || 0)), 0);
       const dest = o.target || (o.type === 'Dine-in' ? (o.table ? `Table ${o.table}` : 'Dine-in Table') : o.type === 'In-room' ? (o.room ? `Room ${o.room}` : 'In-room') : 'Takeaway Counter');
 
-      let statusPill = 'pill--muted';
-      if (o.status === 'New') statusPill = 'pill--bad';
-      else if (o.status === 'Preparing') statusPill = 'pill--warn';
-      else if (o.status === 'Ready') statusPill = 'pill--info';
-      else if (o.status === 'Served') statusPill = isSettled ? 'pill--ok' : 'pill--info';
-      else if (isCancelled) statusPill = 'pill--bad';
-
       let payPill = 'pill--warn';
-      if (isSettled) payPill = 'pill--ok';
-      else if (isCancelled) payPill = 'pill--bad';
+      let payLabel = o.payStatus || 'Unpaid';
+      if (isSettled) {
+        payPill = 'pill--ok';
+        payLabel = (o.payStatus === 'Room folio' || o.status === 'Charged to room') ? 'Room Folio' : 'Paid';
+      } else if (isCancelled) {
+        payPill = 'pill--bad';
+        payLabel = 'Void';
+      }
 
       return `
         <tr>
@@ -253,22 +244,10 @@
           <td><b>${peso(orderTotal)}</b></td>
           <td><span class="text-xs text-muted">${fmtDate(o.created ? o.created.slice(0, 10) : today())}</span></td>
           <td>
-            <span class="pill ${statusPill}">${esc(o.status)}</span>
-            <div style="margin-top: 4px;">
-              <span class="pill ${payPill}" style="font-size: 10px;">${esc(o.payStatus || 'Unpaid')}</span>
-            </div>
+            <span class="pill ${payPill}">${esc(payLabel)}</span>
           </td>
           <td style="text-align: right;">
             <div style="display: flex; justify-content: flex-end; gap: 4px; flex-wrap: wrap;">
-              ${!isCancelled && o.status === 'New' ? `
-                <button type="button" class="btn-secondary btn-sm" onclick="advanceOrderStatus('${o.code}', 'Preparing')">Start Cooking</button>
-              ` : ''}
-              ${!isCancelled && o.status === 'Preparing' ? `
-                <button type="button" class="btn-secondary btn-sm" onclick="advanceOrderStatus('${o.code}', 'Ready')">Mark Ready</button>
-              ` : ''}
-              ${!isCancelled && o.status === 'Ready' ? `
-                <button type="button" class="btn-secondary btn-sm" onclick="advanceOrderStatus('${o.code}', 'Served')">Mark Served</button>
-              ` : ''}
               ${!isSettled && !isCancelled ? `
                 <button type="button" class="btn btn-sm" onclick="openBillSettlementModal('${o.code}')">Bill / Settle</button>
                 <button type="button" class="btn-secondary btn-sm" onclick="openAddItemsModal('${o.code}')">+ Items</button>
@@ -833,7 +812,7 @@
       }
 
       Data.addCharge(resCode, `Restaurant: ${order.code}`, total, 'Dining');
-      order.status = 'Served';
+      order.status = 'Charged to room';
       order.payStatus = 'Room folio';
       order.linkedRes = resCode;
       order.resCode = resCode;
@@ -849,6 +828,18 @@
       if (oIdx !== -1) {
         allOrders[oIdx] = order;
         Data.saveOrders(allOrders);
+      }
+
+      // If dine-in, transition table
+      if (order.type === 'Dine-in' && (order.table || order.tableNo)) {
+        const tNum = order.table || order.tableNo;
+        const tables = Data.getTables();
+        const t = tables.find(x => x.num === tNum || x.id === tNum);
+        if (t) {
+          t.st = 'Needs cleaning';
+          t.status = 'Needs cleaning';
+          Data.saveTables(tables);
+        }
       }
 
       toast(`Order ${order.code} charged to room folio ${resCode}`, 'ok');
@@ -874,7 +865,7 @@
             <div class="text-xs text-secondary">${dest}</div>
           </div>
           <div>
-            <span class="pill ${order.payStatus === 'Paid' || order.payStatus === 'Room folio' ? 'pill--ok' : 'pill--info'}">${order.status}</span>
+            <span class="pill ${order.payStatus === 'Paid' || order.payStatus === 'Room folio' ? 'pill--ok' : 'pill--warn'}">${order.payStatus || (order.status === 'Cancelled' ? 'Void' : 'Unpaid')}</span>
           </div>
         </div>
 
@@ -917,8 +908,7 @@
       { header: 'Type', key: 'type' },
       { header: 'Destination', key: 'target' },
       { header: 'Total (PHP)', key: r => r.subtotal || 0 },
-      { header: 'Kitchen Status', key: 'status' },
-      { header: 'Billing Status', key: 'payStatus' },
+      { header: 'Billing Status', key: r => r.payStatus || (r.status === 'Cancelled' ? 'Void' : 'Unpaid') },
       { header: 'Payment Ref', key: 'paymentKind' },
       { header: 'Date Created', key: 'created' }
     ];

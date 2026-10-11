@@ -42,9 +42,9 @@ const CONFIG = {
   policies: [
     ['Check-In Time', 'From 2:00 PM (Front Desk registration and key card issuance)'],
     ['Check-Out Time', 'Until 12:00 PM (Complimentary late check-out subject to room availability)'],
-    ['Guarantee Deposit', '50% room charge secures your booking with instant official tax receipt'],
-    ['Cancellation Terms', 'Free cancellation up to 3 days before arrival; later cancellations retain the first night rate'],
-    ['Payment Settlement', 'Credit cards, GCash, Maya, Bank wire transfer, and cash at Front Desk with official BIR invoice'],
+    ['Guarantee Deposit', '50% down payment secures your booking with instant official tax receipt'],
+    ['Cancellation Terms', 'Free cancellation up to 3 days before arrival. Cancellations made less than 3 days before arrival are refunded less a 30% deduction. No-shows are not refunded.'],
+    ['Payment Settlement', 'Credit cards, GCash, Maya, and Bank transfer (online banking / QR Ph) with instant confirmation and official BIR invoice'],
     ['Prices & Levies', 'All posted accommodation and dining prices include 12% VAT and 10% service charge']
   ],
   tax: {
@@ -52,7 +52,11 @@ const CONFIG = {
     svcPct: 10
   },
   depositPct: 50,
+  holdMinutes: 15,
+  bankHoldMinutes: 30,
+  maxPayAttempts: 3,
   freeCancelDays: 3,
+  lateCancelFeePct: 30,
   responseTime: 'within 2 hours during front desk hours',
   demoLogins: true,
   legal: {
@@ -100,6 +104,10 @@ const esc = s => {
 // ─── Date & Timezone Utilities ───
 // Calculates the correct local date string (YYYY-MM-DD), avoiding the UTC overnight date skew in Manila
 const today = () => {
+  if (typeof store !== 'undefined' && store.get) {
+    const bd = store.get('businessDate', null);
+    if (bd && typeof bd === 'string' && bd.length === 10) return bd;
+  }
   const d = new Date();
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -321,7 +329,10 @@ const showModal = (title, bodyHtml, footerHtml = '', options = {}) => {
   backdrop.innerHTML = `
     <div class="modal" role="dialog" aria-modal="true" style="${maxWidth}">
       <div class="modal-header">
-        <h3>${safeTitle}</h3>
+        <div class="modal-title-wrap">
+          <h3>${safeTitle}</h3>
+          ${options.subtitle ? `<div class="modal-subtitle">${options.subtitle}</div>` : ''}
+        </div>
         <button class="modal-close" id="modalCloseBtn" aria-label="Close dialog"><span class="ic" data-icon="close">[ICON: close]</span></button>
       </div>
       <div class="modal-body" id="modalBody">
@@ -593,8 +604,29 @@ const renderPagination = (p, containerId, onPageChange) => {
   if (next && p.hasNext) next.onclick = () => onPageChange(p.page + 1);
 };
 
+// ─── Canonical Money & Currency Precision Helper ───
+const Money = {
+  round2(n) {
+    return Math.round((Number(n) || 0) * 100) / 100;
+  },
+  ceilCentavo(n) {
+    return Math.ceil((Number(n) || 0) * 100) / 100;
+  },
+  floorCentavo(n) {
+    return Math.floor((Number(n) || 0) * 100) / 100;
+  },
+  format(n) {
+    return typeof peso === 'function' ? peso(n) : '₱' + (Number(n) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+};
+if (typeof window !== 'undefined') window.Money = Money;
+
 // ─── Single Canonical Stay Pricing Engine ───
-const calculateStayPricing = ({ baseRate, nights, promo }) => {
+const calculateStayPricing = (params) => {
+  if (typeof PricingService !== 'undefined' && typeof PricingService.quote === 'function') {
+    return PricingService.quote(params);
+  }
+  const { baseRate, nights, promo } = params || {};
   const nts = Math.max(1, Number(nights || 1));
   const rate = Number(baseRate || 3200);
   const baseTotal = nts * rate;
@@ -611,8 +643,9 @@ const calculateStayPricing = ({ baseRate, nights, promo }) => {
   }
 
   const netTotal = Math.max(0, baseTotal - discount);
-  const depDue = Math.ceil(netTotal * (CONFIG.depositPct / 100));
-  const balDue = netTotal - depDue;
+  const depPct = (typeof CONFIG !== 'undefined' && CONFIG.depositPct) ? CONFIG.depositPct : 50;
+  const depDue = Money.ceilCentavo(netTotal * (depPct / 100));
+  const balDue = Money.round2(netTotal - depDue);
   const taxes = taxBreakdown(netTotal);
 
   return {
@@ -621,6 +654,9 @@ const calculateStayPricing = ({ baseRate, nights, promo }) => {
     baseTotal,
     discount,
     netTotal,
+    total: netTotal,
+    depositPct: depPct,
+    depositRequired: depDue,
     depDue,
     balDue,
     taxes
@@ -747,5 +783,12 @@ if (typeof window !== 'undefined') {
   window.printDocument = printDocument;
   window.paginate = paginate;
   window.renderPagination = renderPagination;
+
+  // Cross-tab real-time sync via storage event
+  window.addEventListener('storage', (e) => {
+    if (e.key && e.key.startsWith('pupsj.')) {
+      window.dispatchEvent(new CustomEvent('pupsj:data-change', { detail: { crossTab: true, key: e.key } }));
+    }
+  });
 }
 

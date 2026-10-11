@@ -59,7 +59,7 @@
     if (intent.type === 'room') {
       banner.innerHTML = `
         <div style="font-weight: 600; color: var(--gold-ink); margin-bottom: 4px;">
-          🛎️ Pending Room Reservation
+          [PLACEHOLDER: Bell Icon - Insert room reservation service bell icon here] Pending Room Reservation
         </div>
         <div><b>Category:</b> ${esc(intent.roomType)} &middot; <b>Stay:</b> ${fmtDate ? fmtDate(intent.ci) : intent.ci} to ${fmtDate ? fmtDate(intent.co) : intent.co} (${intent.guests} guests)</div>
         <div class="text-xs text-secondary" style="margin-top: 4px;">Sign in or create your account below. Your booking will automatically reopen ready to confirm.</div>
@@ -67,7 +67,7 @@
     } else if (intent.type === 'table') {
       banner.innerHTML = `
         <div style="font-weight: 600; color: var(--gold-ink); margin-bottom: 4px;">
-          🍽️ Pending Table Reservation
+          [PLACEHOLDER: Dining Plate Icon - Insert table reservation dining icon here] Pending Table Reservation
         </div>
         <div><b>Dining:</b> ${fmtDate ? fmtDate(intent.date) : intent.date} at ${esc(intent.time)} &middot; ${intent.partySize} guests</div>
         <div class="text-xs text-secondary" style="margin-top: 4px;">Sign in or create your account below. Your table reservation will automatically resume.</div>
@@ -123,8 +123,16 @@
       if (authRes && authRes.ok) {
         const session = authRes.data;
         if (session.role === 'superadmin') {
-          toast(`Welcome back, Superadmin (${session.name}).`, 'ok');
+          toast(`Welcome back, Administrator (${session.name}).`, 'ok');
           const dest = safeNextUrl || '../management/dashboard.html';
+          setTimeout(() => { location.href = dest; }, 350);
+        } else if (session.role === 'hotel_receptionist') {
+          toast(`Welcome, Hotel Front Desk (${session.name}).`, 'ok');
+          const dest = safeNextUrl || '../hotel/dashboard.html';
+          setTimeout(() => { location.href = dest; }, 350);
+        } else if (session.role === 'restaurant_receptionist') {
+          toast(`Welcome, Restaurant Staff (${session.name}).`, 'ok');
+          const dest = safeNextUrl || '../restaurant/orders.html';
           setTimeout(() => { location.href = dest; }, 350);
         } else {
           toast(`Welcome back, ${session.name}.`, 'ok');
@@ -517,7 +525,7 @@
     };
   }
 
-  // ─── 5. Demo Accounts Quick Sign-In Handlers ───
+  // ─── 5. Demo Accounts Quick Sign-In Handlers (Four-Role Model) ───
   const btnDemoAdmin = $('btnDemoAdmin');
   if (btnDemoAdmin) {
     btnDemoAdmin.onclick = () => {
@@ -527,11 +535,20 @@
     };
   }
 
-  const btnDemoFrontDesk = $('btnDemoFrontDesk');
-  if (btnDemoFrontDesk) {
-    btnDemoFrontDesk.onclick = () => {
-      $('loginEmail').value = 'maria@pupsj.edu.ph';
-      $('loginPassword').value = 'frontdesk123';
+  const btnDemoHotel = $('btnDemoHotel') || $('btnDemoFrontDesk');
+  if (btnDemoHotel) {
+    btnDemoHotel.onclick = () => {
+      $('loginEmail').value = 'hotel@pupsj.edu.ph';
+      $('loginPassword').value = 'hotel123';
+      $('btnSubmitSignIn').click();
+    };
+  }
+
+  const btnDemoRestaurant = $('btnDemoRestaurant');
+  if (btnDemoRestaurant) {
+    btnDemoRestaurant.onclick = () => {
+      $('loginEmail').value = 'restaurant@pupsj.edu.ph';
+      $('loginPassword').value = 'restaurant123';
       $('btnSubmitSignIn').click();
     };
   }

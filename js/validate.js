@@ -7,7 +7,7 @@
 
   const WHITELISTED_PAGES = [
     'home.html', 'rooms-deals.html', 'menu.html', 'about.html',
-    'contact.html', 'privacy.html', 'terms.html', 'guest-login.html',
+    'contact.html', 'privacy.html', 'terms.html', 'login.html', 'guest-login.html',
     'guest-portal.html', 'dashboard.html', 'reservations.html',
     'guests.html', 'housekeeping.html', 'maintenance.html',
     'orders.html', 'kitchen.html', 'tables.html', 'menu-management.html',
@@ -172,7 +172,7 @@
     if (!data.name || !data.name.trim()) errors.name = 'Item name required.';
     if (!data.category || !data.category.trim()) errors.category = 'Category required.';
     if (typeof data.price !== 'number' || data.price <= 0) errors.price = 'Valid positive price required.';
-    if (!['Kitchen', 'Bar'].includes(data.station)) errors.station = 'Station must be Kitchen or Bar.';
+    if (data.station && !['Kitchen'].includes(data.station)) errors.station = 'Station must be Kitchen.';
     return { valid: Object.keys(errors).length === 0, errors };
   }
 
@@ -210,6 +210,7 @@
   };
 
   root.PUPSJ_Validators = Validators;
+  root.validateReturnUrl = validateReturnUrl;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = Validators;
   }

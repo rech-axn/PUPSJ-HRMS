@@ -148,7 +148,7 @@
               returnUrl: window.location.pathname + window.location.search
             });
           }
-          location.href = '../auth/guest-login.html?tab=register&next=' + encodeURIComponent(window.location.pathname + window.location.search);
+          location.href = '../auth/login.html?tab=register&next=' + encodeURIComponent(window.location.pathname + window.location.search);
         }
         return;
       }

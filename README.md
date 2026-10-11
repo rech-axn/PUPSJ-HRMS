@@ -24,7 +24,7 @@ SAD_UI/
 │   ├── contact.js                       # Public contact form submitting to staff inquiries
 │   ├── menu.js                          # Public dining menu catalog & table reservation booking
 │   ├── rooms-deals.js                   # Public live room rates, stay calculator, and active promos
-│   ├── guest-login.js                   # Unified authentication, guest registration & exact lookup
+│   ├── login.js                         # Unified authentication, guest registration & exact lookup (legacy guest-login.js alias)
 │   ├── guest-portal.js                  # Guest self-service portal (stay folio, dining orders, housekeeping, loyalty, messaging)
 │   ├── dashboard.js                     # Staff operations dashboard, KPIs, month calendar, pending alerts
 │   ├── reservations.js                  # Staff reservations ledger (table, month/week/agenda calendar, check-in/out)
@@ -32,7 +32,6 @@ SAD_UI/
 │   ├── housekeeping.js                  # Staff housekeeping matrix, arrival priority, and guest requests queue
 │   ├── maintenance.js                   # Staff facility work orders, priority triage, and out-of-service room toggling
 │   ├── orders.js                        # Staff restaurant POS, dining/in-room tickets, and folio billing
-│   ├── kitchen.js                       # Kitchen Display System (KDS) board with 30s timers and station routing
 │   ├── tables.js                        # Restaurant floor plan grid, table status, and reservation seating
 │   ├── menu-mgmt.js                     # Staff menu catalog CRUD, 86 availability toggling, and categories
 │   ├── payments.js                      # Finance folios ledger, official receipts journal, and quick POS terminal
@@ -61,7 +60,8 @@ SAD_UI/
     │   ├── rooms.html                   # Staff room inventory
     │   └── roomtypes.html               # Staff room categories
     ├── auth/
-    │   └── guest-login.html             # Unified sign-in, account creation & booking finder
+    │   ├── login.html                   # Unified sign-in, account creation & booking finder
+    │   └── guest-login.html             # Redirect shim to login.html
     ├── guest/
     │   ├── guest-portal.html            # In-house guest self-service portal
     │   └── guests.html                  # Staff guest CRM
@@ -71,7 +71,6 @@ SAD_UI/
         ├── housekeeping.html            # Staff housekeeping & room turnover
         ├── maintenance.html             # Staff facility work orders
         ├── orders.html                  # Staff restaurant POS & order billing
-        ├── kitchen.html                 # Kitchen Display System (KDS)
         ├── tables.html                  # Floor plan & table seating
         ├── menu.html                    # Staff menu catalog
         ├── payments.html                # Finance folios & receipt ledger
@@ -136,7 +135,7 @@ window.CONFIG = {
 
 ## 3. Demo Accounts & Default Credentials
 
-Demo accounts can be used to immediately access all features. On `pages/auth/guest-login.html`, one-click demo login buttons are provided:
+Demo accounts can be used to immediately access all features. On `pages/auth/login.html` (formerly `guest-login.html`), one-click demo login buttons are provided:
 
 ### Staff Accounts (Staff Operations & Management)
 | Role / Label | Username | Password | Access Scope |

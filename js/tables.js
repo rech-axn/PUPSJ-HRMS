@@ -21,7 +21,10 @@
       o.type === 'Dine-in' && 
       (Number(o.table) === Number(num) || Number(o.tableNo) === Number(num)) && 
       o.status !== 'Cancelled' && 
-      !(o.status === 'Served' && (o.payStatus === 'Paid' || o.payStatus === 'Room folio'))
+      o.payStatus !== 'Paid' && 
+      o.payStatus !== 'Room folio' &&
+      o.status !== 'Paid' && 
+      o.status !== 'Charged to room'
     );
 
     if (activeOrder) {
@@ -70,7 +73,7 @@
     app.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
         <div>
-          <span class="site-section-tag">RESTAURANT &amp; BAR</span>
+          <span class="site-section-tag">RESTAURANT</span>
           <h1 style="font-size: 28px; margin: 4px 0 0 0;">Table Seating &amp; Floor Management</h1>
         </div>
         <div style="display: flex; gap: 8px;">
@@ -123,7 +126,6 @@
               <button class="btn-secondary btn-sm ${areaFilter === 'Main Dining' ? 'btn-active' : ''}" data-area="Main Dining">Main Dining</button>
               <button class="btn-secondary btn-sm ${areaFilter === 'Garden Terrace' ? 'btn-active' : ''}" data-area="Garden Terrace">Garden Terrace</button>
               <button class="btn-secondary btn-sm ${areaFilter === 'Private Room' ? 'btn-active' : ''}" data-area="Private Room">Private Room</button>
-              <button class="btn-secondary btn-sm ${areaFilter === 'Bar Lounge' ? 'btn-active' : ''}" data-area="Bar Lounge">Bar Lounge</button>
             </div>
           </div>
         </div>
@@ -234,7 +236,7 @@
             <div style="background: rgba(0,0,0,0.03); padding: 8px; border-radius: 6px; margin: 8px 0; font-size: 12px;">
               <div style="display:flex; justify-content:space-between;">
                 <span>Order: <b>${activeOrder.code}</b></span>
-                <span class="pill pill--muted" style="font-size:10px;">${activeOrder.status}</span>
+                <span class="pill pill--warn" style="font-size:10px;">${activeOrder.payStatus || 'Unpaid'}</span>
               </div>
               <div style="margin-top: 4px; display:flex; justify-content:space-between; color: var(--gold-ink); font-weight:600;">
                 <span>Total: ${peso(activeOrder.subtotal || 0)}</span>

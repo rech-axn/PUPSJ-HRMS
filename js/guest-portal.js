@@ -12,13 +12,13 @@
   const urlParams = new URLSearchParams(window.location.search);
   const queryCode = urlParams.get('code');
 
-  // Strict session check: redirect to guest-login with ?next= set
+  // Strict session check: redirect to login with ?next= set
   if (!guestSession) {
     const returnTarget = window.location.pathname + window.location.search;
     if (queryCode) {
-      window.location.replace(`../auth/guest-login.html?code=${encodeURIComponent(queryCode)}&next=${encodeURIComponent(returnTarget)}`);
+      window.location.replace(`../auth/login.html?code=${encodeURIComponent(queryCode)}&next=${encodeURIComponent(returnTarget)}`);
     } else {
-      window.location.replace(`../auth/guest-login.html?next=${encodeURIComponent(returnTarget)}`);
+      window.location.replace(`../auth/login.html?next=${encodeURIComponent(returnTarget)}`);
     }
     return;
   }
@@ -134,16 +134,14 @@
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
         <div>
           <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 24px; margin: 0 0 4px 0;">In-Room Dining &amp; Orders</h2>
-          <p class="text-sm text-secondary" style="margin: 0;">Live tracking of kitchen preparation and meal delivery to your room.</p>
+          <p class="text-sm text-secondary" style="margin: 0;">Review your in-room dining orders, billed items, and payment status.</p>
         </div>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 16px;">
         ${myOrders.map(o => {
-          let stepProgress = 1;
-          if (o.status === 'Preparing') stepProgress = 2;
-          if (o.status === 'Ready') stepProgress = 3;
-          if (o.status === 'Served' || o.payStatus === 'Paid') stepProgress = 4;
+          const isSettled = o.payStatus === 'Paid' || o.payStatus === 'Room folio' || o.status === 'Paid' || o.status === 'Charged to room';
+          const payLabel = (o.payStatus === 'Room folio' || o.status === 'Charged to room') ? 'Room Folio' : (isSettled ? 'Paid' : (o.payStatus || 'Unpaid'));
 
           return `
             <div class="card" style="padding: 20px;">
@@ -154,23 +152,21 @@
                   <div class="text-xs text-muted" style="margin-top: 2px;">Placed at ${esc(o.time || '12:00')} &middot; Destination: <b>${esc(o.target)}</b></div>
                 </div>
                 <div style="text-align: right;">
-                  <span class="pill ${o.status === 'Served' ? 'pill--ok' : o.status === 'Preparing' ? 'pill--warn' : 'pill--info'}">
-                    ${esc(o.status)}
+                  <span class="pill ${isSettled ? 'pill--ok' : 'pill--warn'}">
+                    ${esc(payLabel)}
                   </span>
                   <div style="font-weight: 600; font-size: 15px; margin-top: 4px;">${peso(o.subtotal || o.total)}</div>
                 </div>
               </div>
 
-              <!-- Order Preparation Status Tracker -->
-              <div style="background: var(--surface-2); border-radius: 4px; padding: 12px; margin-bottom: 14px;">
-                <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px;">
-                  <span style="color: ${stepProgress >= 1 ? 'var(--gold-ink)' : 'var(--muted)'};">1. Order Placed</span>
-                  <span style="color: ${stepProgress >= 2 ? 'var(--gold-ink)' : 'var(--muted)'};">2. Kitchen Preparing</span>
-                  <span style="color: ${stepProgress >= 3 ? 'var(--gold-ink)' : 'var(--muted)'};">3. Order Ready</span>
-                  <span style="color: ${stepProgress >= 4 ? 'var(--ok)' : 'var(--muted)'};">4. Delivered &amp; Served</span>
+              <!-- Order Billing & Status Summary -->
+              <div style="background: var(--surface-2); border-radius: 4px; padding: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 13px;">
+                  <span class="text-secondary">Billing Status:</span> <b>${esc(payLabel)}</b>
+                  ${o.paymentKind ? `<span class="text-muted" style="margin-left: 8px;">(${esc(o.paymentKind)})</span>` : ''}
                 </div>
-                <div style="height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;">
-                  <div style="height: 100%; width: ${(stepProgress / 4) * 100}%; background: ${stepProgress === 4 ? 'var(--ok)' : 'var(--gold)'}; transition: width 0.3s ease;"></div>
+                <div class="text-xs font-semibold" style="color: ${isSettled ? 'var(--ok)' : 'var(--warn)'};">
+                  ${isSettled ? '✓ Fully Settled' : '● Awaiting Settlement'}
                 </div>
               </div>
 
@@ -191,7 +187,7 @@
         }).join('')}
         ${myOrders.length === 0 ? `
           <div class="card" style="padding: 40px; text-align: center;">
-            <div style="font-size: 36px; margin-bottom: 8px;">🍽️</div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--gold-ink); margin-bottom: 8px;">[PLACEHOLDER: Dining Tray Icon - Insert dining cloche / plate illustration here]</div>
             <h3>No Active Dining Orders</h3>
             <p class="text-sm text-secondary">You haven't ordered room service or dining for this stay yet.</p>
             ${activeRes ? `
@@ -297,17 +293,7 @@
       <a href="../rooms/rooms-deals.html" class="btn-secondary btn-sm">
         + Book Another Room
       </a>
-      <button class="btn-ghost btn-sm" id="btnGpSignOut">
-        Sign Out
-      </button>
     `;
-    const soBtn = $('btnGpSignOut');
-    if (soBtn) {
-      soBtn.onclick = () => {
-        Data.clearGuestSession();
-        window.location.replace('../main/home.html');
-      };
-    }
   }
 
   // ─── Tab Switching ───
@@ -696,54 +682,10 @@
       };
     }
 
-    // 4. Pay Balance Due (Simulated)
+    // 4. Pay Balance Due (Online Gateway)
     const payBalBtn = $('btnGpPayBalance');
     if (payBalBtn) {
-      payBalBtn.onclick = () => {
-        const bal = Data.balOf(res);
-        showModal(
-          `Settle Folio Balance (${peso(bal)})`,
-          `
-          <div class="field">
-            <label for="gpPayMethod">Select Payment Method</label>
-            <select id="gpPayMethod">
-              <option value="Credit card">Credit / Debit Card</option>
-              <option value="GCash">GCash E-Wallet</option>
-              <option value="Maya">Maya E-Wallet</option>
-              <option value="Cash">Cash at Front Desk</option>
-            </select>
-            <span class="field-hint">Simulated payment (no real charge)</span>
-          </div>
-          <div class="field">
-            <label for="gpPayAmount">Amount to Pay</label>
-            <input type="number" id="gpPayAmount" value="${bal}" min="1" max="${bal}">
-          </div>
-          `,
-          `
-          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-          <button class="btn" id="btnConfirmGpPayment">Authorize Payment</button>
-          `,
-          {
-            onOpen(modal) {
-              modal.querySelector('#btnConfirmGpPayment').onclick = () => {
-                const amt = +modal.querySelector('#gpPayAmount').value;
-                const method = modal.querySelector('#gpPayMethod').value;
-                if (amt <= 0 || amt > bal) {
-                  toast('Please enter a valid payment amount.');
-                  return;
-                }
-                const pay = Data.addPayment(res, amt, method, 'Payment', 'Online guest portal folio settlement', {
-                  auth: 'AUTH-' + Math.floor(100000 + Math.random() * 900000),
-                  cardLast4: '8842'
-                });
-                closeModal();
-                toast(`Receipt ${pay.id} recorded · ${peso(amt)} via ${method}`);
-                renderCurrentStay();
-              };
-            }
-          }
-        );
-      };
+      payBalBtn.onclick = () => openPayBalanceModal(res.c, renderCurrentStay);
     }
 
     
@@ -859,83 +801,257 @@
     // 6. Modify Booking
     const editResBtn = $('btnGpEditRes');
     if (editResBtn) {
-      editResBtn.onclick = () => {
-        showModal(
-          `Modify Reservation ${res.c}`,
-          `
+      editResBtn.onclick = () => openModifyStayModal(res.c, renderCurrentStay);
+    }
+  }
+
+  // ─── Modal: Settle Balance Online ───
+  function openPayBalanceModal(resCode, onComplete = null) {
+    const res = Data.findRes(resCode);
+    if (!res) {
+      toast('Reservation not found', 'bad');
+      return;
+    }
+    const bal = res.balanceDue != null ? res.balanceDue : Data.balOf(res);
+    if (bal <= 0) {
+      toast('Outstanding balance is already settled in full.', 'ok');
+      return;
+    }
+
+    const modalHtml = `
+      <div style="font-size: 14px;">
+        <div style="background: var(--surface-2); padding: 12px; border-radius: var(--r); margin-bottom: 14px; border: 1px solid var(--line);">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Reservation:</span>
+            <b>${res.c} &middot; ${esc(res.t)}</b>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+            <span>Stay Dates:</span>
+            <span>${fmtDate(res.i)} to ${fmtDate(res.o)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 8px; padding-top: 6px; font-weight: 700; color: var(--bad);">
+            <span>Outstanding Balance:</span>
+            <span style="font-size: 16px;">${peso(bal)}</span>
+          </div>
+        </div>
+
+        <form id="payBalanceForm" onsubmit="return false;">
+          <div class="field">
+            <label for="gpPayMethod">Online Payment Method *</label>
+            <select id="gpPayMethod">
+              <option value="Credit card">Credit / Debit Card (Visa, MasterCard, JCB)</option>
+              <option value="GCash">GCash E-Wallet</option>
+              <option value="Maya">Maya Digital Bank</option>
+              <option value="Bank Transfer">Bank Transfer (Online Banking / QR Ph)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="gpPayAmount">Settlement Amount (₱) *</label>
+            <input type="number" id="gpPayAmount" value="${bal}" min="1" max="${bal}" step="0.01" required>
+            <span class="text-xs text-muted">Remaining balance can be settled at check-in or anytime before.</span>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+            <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="button" class="btn" id="btnConfirmPayBalance">Authorize Payment &rarr;</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    showModal(`Pay Folio Balance &mdash; ${res.c}`, modalHtml, '', {
+      maxWidth: '460px',
+      onOpen(modal) {
+        modal.querySelector('#btnConfirmPayBalance').onclick = () => {
+          const amt = +modal.querySelector('#gpPayAmount').value;
+          const method = modal.querySelector('#gpPayMethod').value;
+          if (amt <= 0 || amt > bal) {
+            toast('Please enter a valid payment amount.', 'warn');
+            return;
+          }
+
+          const pay = Data.addPayment(res, amt, method, 'Payment', 'Online guest portal balance settlement', {
+            auth: 'AUTH-' + Math.floor(100000 + Math.random() * 900000),
+            cardLast4: '8842'
+          });
+
+          res.balanceDue = Math.max(0, typeof Money !== 'undefined' ? Money.round2(bal - amt) : Math.round(bal - amt));
+          Data.updateReservation(res.c, res);
+          window.dispatchEvent(new CustomEvent('pupsj:data-change'));
+
+          closeModal();
+          toast(`Payment recorded (OR: ${pay.id}) &middot; ${peso(amt)} via ${method}`, 'ok');
+          if (typeof onComplete === 'function') onComplete();
+          renderMyReservations();
+        };
+      }
+    });
+  }
+
+  // ─── Modal: Modify Reservation Stay ───
+  function openModifyStayModal(resCode, onComplete = null) {
+    const res = Data.findRes(resCode);
+    if (!res) {
+      toast('Reservation not found', 'bad');
+      return;
+    }
+    if (res.st === 'Checked-in' || res.st === 'Checked-out' || res.st === 'Cancelled') {
+      toast('Modification is locked for stays that are in-house, completed, or cancelled.', 'warn');
+      return;
+    }
+
+    const types = typeof Data !== 'undefined' && Data.getTypes ? Data.getTypes() : [];
+    const modalHtml = `
+      <div style="font-size: 14px;">
+        <p class="text-secondary text-sm" style="margin: 0 0 14px;">
+          Update your stay dates, room type, or guest headcount. Modifying to a higher tariff requires settling the 50% deposit difference.
+        </p>
+
+        <form id="modifyStayForm" onsubmit="return false;">
+          <div class="field">
+            <label for="modType">Room Category</label>
+            <select id="modType">
+              ${types.map(t => `<option value="${esc(t.n)}" ${t.n === res.t ? 'selected' : ''}>${esc(t.n)} (${peso(t.r)}/nt)</option>`).join('')}
+            </select>
+          </div>
           <div class="field-row-2">
             <div class="field">
-              <label for="editCi">Check-in</label>
-              <input type="date" id="editCi" value="${res.i}" min="${today()}">
+              <label for="modCi">Check-in Date *</label>
+              <input type="date" id="modCi" value="${res.i}" min="${today()}" required>
             </div>
             <div class="field">
-              <label for="editCo">Check-out</label>
-              <input type="date" id="editCo" value="${res.o}">
+              <label for="modCo">Check-out Date *</label>
+              <input type="date" id="modCo" value="${res.o}" min="${addDays(res.i, 1)}" required>
             </div>
           </div>
           <div class="field-row-2">
             <div class="field">
-              <label for="editGuests">Guests</label>
-              <input type="number" id="editGuests" value="${res.gu}" min="1">
+              <label for="modGuests">Guests *</label>
+              <input type="number" id="modGuests" value="${res.gu}" min="1" max="10" required>
             </div>
             <div class="field">
-              <label for="editPhone">Contact Phone</label>
-              <input type="tel" id="editPhone" value="${esc(res.ph || '')}">
+              <label for="modPhone">Contact Mobile</label>
+              <input type="tel" id="modPhone" value="${esc(res.ph || '')}">
             </div>
           </div>
           <div class="field">
-            <label for="editNotes">Special Requests</label>
-            <textarea id="editNotes" rows="2">${esc(res.note || '')}</textarea>
+            <label for="modNotes">Special Requests</label>
+            <textarea id="modNotes" rows="2">${esc(res.note || '')}</textarea>
           </div>
-          `,
-          `
-          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-          <button class="btn" id="btnSaveEditRes">Save Changes</button>
-          `,
-          {
-            onOpen(modal) {
-              modal.querySelector('#btnSaveEditRes').onclick = () => {
-                const newCi = modal.querySelector('#editCi').value;
-                const newCo = modal.querySelector('#editCo').value;
-                const newGu = +modal.querySelector('#editGuests').value;
-                const newPh = modal.querySelector('#editPhone').value.trim();
-                const newNotes = modal.querySelector('#editNotes').value.trim();
 
-                if (newCo <= newCi) {
-                  toast('Check-out date must be after check-in.');
-                  return;
-                }
+          <div id="modQuotePreview" style="background: var(--surface-2); padding: 12px; border-radius: var(--r); margin: 12px 0; border: 1px solid var(--line); font-size: 13px;">
+            <!-- Dynamically recomputed -->
+          </div>
 
-                // Verify room availability if dates changed (exclude current reservation res.c)
-                if (newCi !== res.i || newCo !== res.o) {
-                  const free = Data.freeRooms(res.t, newCi, newCo, res.c);
-                  if (!free.length) {
-                    toast('No rooms of this category are available for the new dates.');
-                    return;
-                  }
-                  res.i = newCi;
-                  res.o = newCo;
-                  if (!free.includes(Number(res.n))) {
-                    res.n = free[0];
-                  }
-                }
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+            <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="button" class="btn" id="btnConfirmModify">Save Changes &rarr;</button>
+          </div>
+        </form>
+      </div>
+    `;
 
-                res.gu = newGu;
-                res.ph = newPh;
-                res.note = newNotes;
-                Data.syncPaymentStatus(res);
-                Data.updateReservation(res.c, res);
-                window.dispatchEvent(new CustomEvent('pupsj:data-change'));
+    showModal(`Modify Reservation &mdash; ${res.c}`, modalHtml, '', {
+      maxWidth: '520px',
+      onOpen(modal) {
+        const typeEl = modal.querySelector('#modType');
+        const ciEl = modal.querySelector('#modCi');
+        const coEl = modal.querySelector('#modCo');
+        const guEl = modal.querySelector('#modGuests');
+        const previewEl = modal.querySelector('#modQuotePreview');
+        const submitBtn = modal.querySelector('#btnConfirmModify');
 
-                closeModal();
-                toast('Reservation updated successfully.');
-                renderCurrentStay();
-              };
-            }
+        const recompute = () => {
+          const typeName = typeEl.value;
+          const ciVal = ciEl.value;
+          const coVal = coEl.value;
+          const guVal = +guEl.value;
+          const typeObj = types.find(t => t.n === typeName) || { r: res.rt || 3200 };
+          const nights = Math.max(1, dateDiff(ciVal, coVal));
+
+          const quote = typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.PricingService
+            ? PUPSJ_Services.PricingService.quote({ roomType: typeName, baseRate: typeObj.r, nights, guestCount: guVal })
+            : { total: typeObj.r * nights, depositDue: Math.ceil(typeObj.r * nights * 0.5) };
+
+          const currentPaid = res.depositPaid != null ? res.depositPaid : Data.paidAmt(res);
+          const topUpDue = Math.max(0, typeof Money !== 'undefined' ? Money.round2(quote.depositDue - currentPaid) : (quote.depositDue - currentPaid));
+
+          previewEl.innerHTML = `
+            <div style="display: flex; justify-content: space-between;">
+              <span>New Accommodation Tariff (${nights} nights):</span>
+              <b>${peso(quote.total)}</b>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+              <span>Required Deposit (${CONFIG.depositPct}%):</span>
+              <span>${peso(quote.depositDue)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 4px; color: var(--ok);">
+              <span>Deposit Already Paid:</span>
+              <span>&minus; ${peso(currentPaid)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; font-weight: 700; color: ${topUpDue > 0 ? 'var(--warn)' : 'var(--ok)'};">
+              <span>${topUpDue > 0 ? 'Deposit Top-up Required:' : 'Deposit Status:'}</span>
+              <span>${topUpDue > 0 ? peso(topUpDue) : 'Covered in Full'}</span>
+            </div>
+          `;
+
+          submitBtn.dataset.topup = topUpDue;
+        };
+
+        typeEl.onchange = recompute;
+        ciEl.onchange = () => {
+          if (coEl.value <= ciEl.value) coEl.value = addDays(ciEl.value, 1);
+          coEl.min = addDays(ciEl.value, 1);
+          recompute();
+        };
+        coEl.onchange = recompute;
+        guEl.oninput = recompute;
+        recompute();
+
+        submitBtn.onclick = () => {
+          const newCi = ciEl.value;
+          const newCo = coEl.value;
+          const newType = typeEl.value;
+          const newGu = +guEl.value;
+          const newNotes = modal.querySelector('#modNotes').value.trim();
+          const newPh = modal.querySelector('#modPhone').value.trim();
+
+          if (newCo <= newCi) {
+            toast('Check-out date must be after check-in date.', 'warn');
+            return;
           }
-        );
-      };
-    }
+
+          if (typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.ReservationService) {
+            const modRes = PUPSJ_Services.ReservationService.modifyStay(res.c, {
+              checkIn: newCi,
+              checkOut: newCo,
+              typeId: newType,
+              guests: newGu,
+              notes: newNotes,
+              phone: newPh
+            });
+            if (!modRes.ok) {
+              toast(modRes.error || 'Modification failed: No rooms free for selected dates', 'bad');
+              return;
+            }
+          } else {
+            // Direct update fallback
+            res.i = newCi;
+            res.o = newCo;
+            res.t = newType;
+            res.gu = newGu;
+            res.note = newNotes;
+            res.ph = newPh;
+            Data.updateReservation(res.c, res);
+          }
+
+          window.dispatchEvent(new CustomEvent('pupsj:data-change'));
+          closeModal();
+          toast(`Reservation ${res.c} modified successfully.`, 'ok');
+          if (typeof onComplete === 'function') onComplete();
+          renderMyReservations();
+        };
+      }
+    });
   }
 
   // ─── 2. Tab: My Reservations ───
@@ -950,10 +1066,17 @@
       (guestSession.phone && r.ph && r.ph === guestSession.phone)
     );
 
+    // Also detect any active holds / intents awaiting bank payment
+    const holds = store.get('bookingHolds', []).filter(h =>
+      (h.guestId === guestSession.id || h.email === guestSession.email) &&
+      h.status === 'Active' &&
+      new Date(h.expiresAt).getTime() > Date.now()
+    );
+
     const filtered = all.filter(r => {
       if (filterRes === 'upcoming') return r.st === 'Confirmed' || r.st === 'Pending';
       if (filterRes === 'past') return r.st === 'Checked-out';
-      if (filterRes === 'cancelled') return r.st === 'Cancelled';
+      if (filterRes === 'cancelled') return r.st === 'Cancelled' || r.st === 'No-show';
       return true;
     });
 
@@ -970,13 +1093,48 @@
         </a>
       </div>
 
+      <!-- Active Booking Holds Banner (if guest has pending payment) -->
+      ${holds.map(h => {
+        const expSec = Math.max(0, Math.floor((new Date(h.expiresAt).getTime() - Date.now()) / 1000));
+        const m = String(Math.floor(expSec / 60)).padStart(2, '0');
+        const s = String(expSec % 60).padStart(2, '0');
+        return `
+          <div class="card" style="margin-bottom: 16px; border-left: 4px solid var(--gold); background: var(--surface-2);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <span class="pill pill--warn" style="font-size: 11px;">Awaiting payment (bank confirmation)</span>
+                <h4 style="margin: 4px 0 2px;">Hold ${h.holdId} &middot; ${esc(h.typeId)}</h4>
+                <div class="text-xs text-muted">Dates: ${fmtDate(h.checkIn)} to ${fmtDate(h.checkOut)} &middot; Deposit Due: <b>${peso(h.quoteSnapshot?.depositDue || 0)}</b></div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-family: monospace; font-size: 18px; font-weight: 700; color: var(--gold-ink);">${m}:${s}</div>
+                <button class="btn btn-sm" onclick="openBookingModal('${h.typeId}', '${h.checkIn}', '${h.checkOut}', ${h.guests})" style="margin-top: 4px;">
+                  Complete Payment &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+
       <div style="display: flex; flex-direction: column; gap: 16px;" id="myResList">
         ${filtered.length ? filtered.map(r => {
           const nts = Data.nts(r);
           const total = Data.tot(r);
           const paid = Data.paidAmt(r);
+          const bal = r.balanceDue != null ? r.balanceDue : Data.balOf(r);
           const isCancelled = r.st === 'Cancelled';
+          const isNoShow = r.st === 'No-show';
           const isPast = r.st === 'Checked-out';
+          const isConfirmed = r.st === 'Confirmed';
+
+          // Status Badge Mapping
+          let badgeClass = 'pill--info';
+          if (r.st === 'Confirmed') badgeClass = 'pill--ok';
+          else if (r.st === 'Checked-in') badgeClass = 'pill--info';
+          else if (r.st === 'Checked-out') badgeClass = 'pill--muted';
+          else if (r.st === 'Cancelled' || r.st === 'No-show') badgeClass = 'pill--bad';
+          else if (r.st === 'Expired') badgeClass = 'pill--warn';
 
           // Check if feedback already given
           const fb = Data.getFeedback().find(f => f.resCode === r.c);
@@ -987,15 +1145,15 @@
                 <div>
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <b style="font-size: 17px;">${esc(r.t)}</b>
-                    <span class="pill ${r.st === 'Confirmed' ? 'pill--ok' : r.st === 'Pending' ? 'pill--warn' : r.st === 'Checked-in' ? 'pill--info' : isCancelled ? 'pill--bad' : 'pill--muted'}">
+                    <span class="pill ${badgeClass}">
                       ${r.st}
                     </span>
                   </div>
-                  <div class="text-sm text-muted" style="margin-top: 2px;">Code: <b>${r.c}</b> &middot; Room ${r.n || 'TBD'}</div>
+                  <div class="text-sm text-muted" style="margin-top: 2px;">Code: <b>${r.c}</b> &middot; Room ${r.n || 'Assigned at Check-in'}</div>
                 </div>
                 <div style="text-align: right;">
                   <b style="font-size: 16px; color: var(--gold-ink);">${peso(total)}</b>
-                  <div class="text-sm text-muted">${peso(paid)} paid</div>
+                  <div class="text-sm text-muted">${peso(paid)} settled &middot; ${bal > 0 ? `<b style="color:var(--bad);">${peso(bal)} due</b>` : '<span style="color:var(--ok);">Paid in full</span>'}</div>
                 </div>
               </div>
 
@@ -1004,15 +1162,26 @@
               </div>
 
               <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; flex-wrap: wrap; gap: 8px;">
-                <div style="display: flex; gap: 8px;">
-                  <button class="btn-secondary btn-sm" onclick="printTaxInvoice('${r.c}')">
-                    <span class="ic" data-icon="print">[ICON: print]</span> Tax Folio
-                  </button>
-                  ${(!isCancelled && !isPast && r.st !== 'Checked-in') ? `
-                    <button class="btn-danger btn-sm" data-cancel-code="${r.c}">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  ${(isConfirmed && bal > 0) ? `
+                    <button class="btn btn-sm" data-pay-bal-code="${r.c}">
+                      Pay balance (${peso(bal)})
+                    </button>
+                  ` : ''}
+                  ${isConfirmed ? `
+                    <button class="btn-secondary btn-sm" data-modify-code="${r.c}">
+                      Modify
+                    </button>
+                    <button class="btn-ghost btn-sm" data-cancel-code="${r.c}" style="color: var(--bad);">
                       Cancel
                     </button>
                   ` : ''}
+                  <button class="btn-secondary btn-sm" data-voucher-code="${r.c}">
+                    Download voucher
+                  </button>
+                  <button class="btn-secondary btn-sm" onclick="printTaxInvoice('${r.c}')">
+                    <span class="ic" data-icon="print">[ICON: print]</span> Tax Folio
+                  </button>
                   ${isPast && !fb ? `
                     <button class="btn btn-sm" data-feedback-code="${r.c}">
                       <span class="ic" data-icon="star-filled">[ICON: star-filled]</span> Leave Review
@@ -1043,7 +1212,25 @@
       };
     });
 
-    // Cancel reservation flow
+    // Pay balance clicks
+    container.querySelectorAll('[data-pay-bal-code]').forEach(btn => {
+      btn.onclick = () => openPayBalanceModal(btn.dataset.payBalCode, renderMyReservations);
+    });
+
+    // Modify stay clicks
+    container.querySelectorAll('[data-modify-code]').forEach(btn => {
+      btn.onclick = () => openModifyStayModal(btn.dataset.modifyCode, renderMyReservations);
+    });
+
+    // Voucher download clicks
+    container.querySelectorAll('[data-voucher-code]').forEach(btn => {
+      btn.onclick = () => {
+        if (typeof openVoucherModal === 'function') openVoucherModal(btn.dataset.voucherCode);
+        else printTaxInvoice(btn.dataset.voucherCode);
+      };
+    });
+
+    // Cancel reservation flow with exact refund formula
     container.querySelectorAll('[data-cancel-code]').forEach(btn => {
       btn.onclick = () => {
         const c = btn.dataset.cancelCode;
@@ -1052,21 +1239,28 @@
 
         const paid = Data.paidAmt(res);
         const daysToArrival = dateDiff(today(), res.i);
-        const freeCancel = daysToArrival >= CONFIG.freeCancelDays;
-        const cancelFee = freeCancel ? 0 : Math.min(paid, res.rt || 3200);
-        const refundAmt = Math.max(0, paid - cancelFee);
+        const freeCancel = daysToArrival >= (CONFIG.freeCancelDays || 3);
+        const deductionPct = freeCancel ? 0 : (CONFIG.lateCancelFeePct || 30);
+        const deduction = freeCancel ? 0 : (typeof Money !== 'undefined' ? Money.round2(paid * (deductionPct / 100)) : Math.round(paid * 0.3));
+        const refundAmt = Math.max(0, typeof Money !== 'undefined' ? Money.round2(paid - deduction) : (paid - deduction));
 
         showModal(
           `Cancel Reservation ${res.c}`,
           `
           <p class="text-sm">Are you sure you wish to cancel this reservation for <b>${esc(res.t)}</b>?</p>
           <div class="card card-sm" style="background-color: var(--surface-2); margin: 12px 0; font-size: 13px;">
-            <div><b>Arrival Date:</b> ${fmtDate(res.i)} (${daysToArrival} days away)</div>
+            <div><b>Arrival Date:</b> ${fmtDate(res.i)} (${daysToArrival} day${daysToArrival !== 1 ? 's' : ''} away)</div>
             <div><b>Total Paid:</b> ${peso(paid)}</div>
-            <div><b>Cancellation Terms:</b> ${freeCancel ? 'Eligible for 100% free cancellation' : 'Late cancellation retains 1st night rate'}</div>
-            <div style="border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px;">
-              <b>Estimated Refund:</b> <span class="text-ok" style="font-size: 15px; font-weight: 700;">${peso(refundAmt)}</span>
+            <div><b>Policy Calculation:</b> Paid ${peso(paid)}, deduction (${deductionPct}%) ${peso(deduction)}, you will be refunded <b>${peso(refundAmt)}</b>.</div>
+            <div style="border-top: 1px solid var(--line); margin-top: 8px; padding-top: 6px;">
+              <b>Estimated Refund:</b> <span class="text-ok" style="font-size: 16px; font-weight: 700;">${peso(refundAmt)}</span>
             </div>
+          </div>
+          <div class="text-xs text-muted" style="margin-bottom: 10px;">
+            ${freeCancel
+              ? `Eligible for full refund under the ${CONFIG.freeCancelDays || 3}-day free cancellation policy.`
+              : `Late cancellation (less than ${CONFIG.freeCancelDays || 3} days before arrival) deducts ${CONFIG.lateCancelFeePct || 30}% of all payments made.`
+            }
           </div>
           `,
           `
@@ -1076,9 +1270,12 @@
           {
             onOpen(modal) {
               modal.querySelector('#btnConfirmCancel').onclick = () => {
-                const cancelRes = Data.cancelReservation(res.c, 'Guest');
+                const cancelRes = typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.ReservationService
+                  ? PUPSJ_Services.ReservationService.cancelReservation(res.c, 'Guest')
+                  : Data.cancelReservation(res.c, 'Guest');
+
                 closeModal();
-                toast(`Reservation ${res.c} cancelled. ${peso(cancelRes.refundAmt)} refunded.`);
+                toast(`Reservation ${res.c} cancelled. ${peso(cancelRes.refundAmt || refundAmt)} refunded to original payment method.`, 'ok');
                 renderMyReservations();
               };
             }

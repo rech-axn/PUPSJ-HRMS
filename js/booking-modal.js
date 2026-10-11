@@ -1,7 +1,8 @@
 /* ==========================================================================
    PUPSJ Hotel & Restaurant — Booking Modal & Folio System (booking-modal.js)
-   Universal reservation flow, non-destructive form re-calculation, folio
-   ledger, BIR tax invoices, and reservation detail modal.
+   Universal 5-step reservation flow (Stay -> Guest -> Review -> Pay -> Confirmed),
+   dynamic CONFIG.depositPct, countdown hold timer, simulated gateway & bank QR Ph,
+   folio ledger, BIR tax invoices, and reservation detail modal.
    ========================================================================== */
 'use strict';
 
@@ -35,7 +36,7 @@ function showAuthGateModal({ type = 'room', roomType = 'Standard', ci = '', co =
     const nights = Math.max(1, typeof dateDiff === 'function' ? dateDiff(checkIn, checkOut) : 1);
     const pricing = typeof calculateStayPricing === 'function'
       ? calculateStayPricing({ baseRate: typeObj.r, nights, promo: (typeof Data !== 'undefined' && Data.findPromo) ? Data.findPromo(promo) : null })
-      : { netTotal: typeObj.r * nights, depDue: Math.ceil(typeObj.r * nights * 0.5) };
+      : { netTotal: typeObj.r * nights, depDue: Math.ceil(typeObj.r * nights * (CONFIG.depositPct / 100)) };
 
     summaryDetails = `
       <div class="card card-sm" style="margin: 16px 0; background: var(--surface-2); text-align: left; font-size: 13px; border: 1px solid var(--line);">
@@ -44,7 +45,7 @@ function showAuthGateModal({ type = 'room', roomType = 'Standard', ci = '', co =
         <div><b>Stay Period:</b> ${typeof fmtDate === 'function' ? fmtDate(checkIn) : checkIn} – ${typeof fmtDate === 'function' ? fmtDate(checkOut) : checkOut} (${nights} night${nights > 1 ? 's' : ''})</div>
         <div><b>Registered Guests:</b> ${guests} guest${guests > 1 ? 's' : ''}</div>
         <div><b>Accommodation Total:</b> ${typeof peso === 'function' ? peso(pricing.netTotal) : '₱' + pricing.netTotal}</div>
-        <div style="color: var(--ink-3); font-size: 12px; margin-top: 4px;">50% Guarantee Deposit Due on confirmation: ${typeof peso === 'function' ? peso(pricing.depDue) : '₱' + pricing.depDue}</div>
+        <div style="color: var(--ink-3); font-size: 12px; margin-top: 4px;">${CONFIG.depositPct}% Guarantee Deposit Due on confirmation: ${typeof peso === 'function' ? peso(pricing.depDue) : '₱' + pricing.depDue}</div>
         ${promo ? `<div style="color: var(--ok); margin-top: 4px;"><b>Promotion Voucher:</b> ${esc(promo)}</div>` : ''}
       </div>
     `;
@@ -65,15 +66,15 @@ function showAuthGateModal({ type = 'room', roomType = 'Standard', ci = '', co =
   const isMain = window.location.pathname.includes('/main/');
   const isRoot = !isManagement && !isGuest && !isRooms && !isMain;
   
-  let loginBase = '../auth/guest-login.html';
-  if (isRoot) loginBase = 'pages/auth/guest-login.html';
-  else if (isManagement || isGuest || isRooms || isMain) loginBase = '../auth/guest-login.html';
+  let loginBase = '../auth/login.html';
+  if (isRoot) loginBase = 'pages/auth/login.html';
+  else if (isManagement || isGuest || isRooms || isMain) loginBase = '../auth/login.html';
 
   const returnParam = encodeURIComponent(currentPath);
 
   const gateHtml = `
     <div style="text-align: center; padding: 6px 0;">
-      <div style="font-size: 38px; margin-bottom: 8px;">🔐</div>
+      <div style="font-size: 13px; font-weight: 600; color: var(--gold-ink); margin-bottom: 8px;">[PLACEHOLDER: Security Key Icon - Insert guest authentication key SVG here]</div>
       <h3 style="font-size: 22px; margin: 0 0 8px; font-family: 'Cormorant Garamond', serif;">Guest Account Required</h3>
       <p class="text-secondary" style="font-size: 14px; margin: 0 auto; max-width: 440px;">
         Sign in or create a guest account to complete your reservation. Your choices are safely preserved and will automatically resume.
@@ -98,527 +99,1321 @@ function showAuthGateModal({ type = 'room', roomType = 'Standard', ci = '', co =
   showModal('Sign In or Register', gateHtml, '', { maxWidth: '480px' });
 }
 
-// ─── 1. Public / Front Desk Interactive Booking Modal ───
+// ─── 1. Rebuilt 5-Step Online Room Booking Engine ───
 function openBookingModal(initialType, checkInDate, checkOutDate, guestCount = 2, initialPromo = '', onComplete = null) {
-  const staffSession = Data.getStaffSession();
-  const guestSession = Data.getGuestSession();
+  const staffSession = typeof Data !== 'undefined' && Data.getStaffSession ? Data.getStaffSession() : null;
+  const guestSession = typeof Data !== 'undefined' && Data.getGuestSession ? Data.getGuestSession() : null;
 
-  const types = Data.getTypes();
-  let selectedType = types.find(t => t.n === (initialType ? initialType.n || initialType : '')) || types[0];
+  // Rule 7 / Rule 5.3: Staff sessions using the online flow get guided to their management portal
+  if (staffSession && !guestSession) {
+    const isRoot = !window.location.pathname.includes('/management/') && !window.location.pathname.includes('/guest/') && !window.location.pathname.includes('/rooms/') && !window.location.pathname.includes('/main/');
+    const resPath = isRoot ? 'pages/management/reservations.html?new=1' : '../management/reservations.html?new=1';
+    showModal(
+      'Staff Desk Mode Notice',
+      `
+      <div style="text-align: center; padding: 12px 0;">
+        <div style="font-size: 13px; font-weight: 600; color: var(--gold-ink); margin-bottom: 8px;">[PLACEHOLDER: Briefcase Icon - Insert staff management portal icon here]</div>
+        <h3 style="font-size: 20px; margin: 0 0 8px;">Signed in as Staff: ${esc(staffSession.name)}</h3>
+        <p class="text-secondary" style="font-size: 14px; max-width: 440px; margin: 0 auto 16px;">
+          The public booking engine requires a guest account and 50% online deposit. For walk-ins or staff-assisted front-desk bookings, please use the Front Desk Reservations module.
+        </p>
+        <div style="display: flex; justify-content: center; gap: 10px;">
+          <a href="${resPath}" class="btn">Use New Reservation in your portal &rarr;</a>
+          <button type="button" class="btn-ghost" onclick="closeModal()">Close</button>
+        </div>
+      </div>
+      `,
+      '',
+      { maxWidth: '500px' }
+    );
+    return;
+  }
+
+  const types = typeof Data !== 'undefined' && Data.getTypes ? Data.getTypes() : [];
+  let selectedType = types.find(t => t.n === (initialType ? initialType.n || initialType : '')) || types[0] || { n: 'Standard Room', r: 3200, g: 2 };
 
   let ci = checkInDate || today();
   let co = checkOutDate || addDays(ci, 1);
   if (co <= ci) co = addDays(ci, 1);
   let guests = Math.max(1, Number(guestCount || 2));
-  let activePromo = null;
+  let promoCode = initialPromo || '';
+  let activePromo = (promoCode && typeof Data !== 'undefined' && Data.findPromo) ? Data.findPromo(promoCode) : null;
 
-  // Unauthenticated visitors hitting commit get the friendly Gate
-  if (!staffSession && !guestSession) {
-    showAuthGateModal({
-      type: 'room',
-      roomType: selectedType.n,
-      ci,
-      co,
-      guests,
-      promo: initialPromo
-    });
-    return;
-  }
+  // Step state
+  let currentStep = 1; // 1: Stay, 2: Guest, 3: Review, 4: Pay, 5: Confirmed
+  let guestName = guestSession ? guestSession.name : '';
+  let guestPhone = guestSession ? (guestSession.phone || '') : '';
+  let guestEmail = guestSession ? (guestSession.email || '') : '';
+  let guestNotes = '';
+  let policyAgreed = false;
 
-  const isStaffWalkIn = !!staffSession;
+  let activeHold = null;
+  let activeIntent = null;
+  let timerInterval = null;
+  let pollInterval = null;
+  let confirmedReservation = null;
+  let paymentMethod = 'card'; // 'card' | 'gcash' | 'maya' | 'bank'
+  let selectedBank = 'BDO Unibank';
+  let attemptsMade = 0;
+  let inlinePayError = '';
 
-  // Calculates financial breakdown and availability without wiping inputs
-  const computeState = () => {
-    const nights = Math.max(1, dateDiff(ci, co));
-    const pricing = calculateStayPricing({
-      baseRate: selectedType.r,
-      nights,
-      promo: activePromo
-    });
+  const cleanupTimers = () => {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  };
 
-    const availableRooms = Data.freeRooms(selectedType.n, ci, co);
-    const hasCapacity = guests <= selectedType.g;
-    const canBook = availableRooms.length > 0 && hasCapacity;
-
+  const getQuote = () => {
+    const nights = Math.max(1, typeof dateDiff === 'function' ? dateDiff(ci, co) : 1);
+    if (typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.PricingService) {
+      return PUPSJ_Services.PricingService.quote({
+        roomType: selectedType.n,
+        baseRate: selectedType.r,
+        nights,
+        guestCount: guests,
+        promoCode: activePromo ? activePromo.code : ''
+      });
+    }
+    const base = selectedType.r * nights;
+    const dep = typeof Money !== 'undefined' ? Money.ceilCentavo(base * (CONFIG.depositPct / 100)) : Math.ceil(base * 0.5);
     return {
       nights,
-      baseTotal: pricing.baseTotal,
-      discount: pricing.discount,
-      netTotal: pricing.netTotal,
-      depDue: pricing.depDue,
-      balDue: pricing.balDue,
-      taxes: pricing.taxes,
-      availableRooms,
-      hasCapacity,
-      canBook
+      subtotal: base,
+      discount: 0,
+      total: base,
+      depositDue: dep,
+      balanceDue: base - dep,
+      taxes: { vat: Math.round(base * 0.12), svc: Math.round(base * 0.10) }
     };
   };
 
-  const initial = computeState();
+  const getFreeUnits = (excludeHoldId = null) => {
+    if (typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.AvailabilityService) {
+      const units = PUPSJ_Services.AvailabilityService.unitsFree(selectedType.n, ci, co, excludeHoldId);
+      return typeof units === 'number' ? units : (Array.isArray(units) ? units.length : Number(units) || 0);
+    }
+    const fallback = typeof Data !== 'undefined' && Data.freeRooms ? Data.freeRooms(selectedType.n, ci, co) : [101];
+    return Array.isArray(fallback) ? fallback.length : (Number(fallback) || 0);
+  };
 
-  const bodyHtml = `
-    <div style="font-size: 14px;">
-      ${isStaffWalkIn ? `
-        <div class="banner banner--info" style="margin-bottom: 12px; font-size: 13px; background-color: var(--surface-2); padding: 10px 14px; border-radius: var(--r); border: 1px solid var(--line);">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <span><b>Staff Desk Mode:</b> Signed in as <b>${esc(staffSession.name)}</b> (${esc(staffSession.role)}). Creating Walk-in / Staff-assisted Booking.</span>
-            <a href="../management/reservations.html" class="text-xs" style="color: var(--gold-ink); font-weight: 600; text-decoration: underline;">Open Reservations Module &rarr;</a>
-          </div>
-        </div>
-      ` : ''}
-
-      <!-- Room Summary Card -->
-      <div id="bmSummaryBox" style="background-color: var(--surface-2); padding: 12px 16px; border-radius: var(--r); margin-bottom: 16px; border: 1px solid var(--line);">
-        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
-          <b id="bmTypeNameDisplay" style="font-size: 16px; color: var(--ink);">${esc(selectedType.n)}</b>
-          <span id="bmRateDisplay" style="font-size: 15px; font-weight: 600; color: var(--gold-ink);">${peso(selectedType.r)} / night</span>
-        </div>
-        <div id="bmStayInfo" class="text-sm text-secondary" style="margin-top: 4px;">
-          ${fmtDate(ci)} – ${fmtDate(co)} &middot; ${initial.nights} night${initial.nights > 1 ? 's' : ''} &middot; Max ${selectedType.g} guests
-        </div>
-        <div id="bmAvailabilityBadge" style="margin-top: 6px;">
-          ${!initial.hasCapacity
-            ? `<span class="pill pill--bad">Exceeds capacity (Max ${selectedType.g} guests)</span>`
-            : initial.availableRooms.length
-              ? `<span class="pill pill--ok">${initial.availableRooms.length} room${initial.availableRooms.length > 1 ? 's' : ''} available</span>`
-              : `<span class="pill pill--bad">Fully booked for selected dates</span>`
-          }
-        </div>
+  const renderStepsNav = () => {
+    const steps = [
+      { num: 1, label: 'Stay' },
+      { num: 2, label: 'Guest' },
+      { num: 3, label: 'Review' },
+      { num: 4, label: 'Pay' },
+      { num: 5, label: 'Confirmed' }
+    ];
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--line); padding-bottom: 12px; gap: 4px;">
+        ${steps.map(s => {
+          const isActive = s.num === currentStep;
+          const isDone = s.num < currentStep;
+          return `
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: ${isActive ? '700' : '500'}; color: ${isActive ? 'var(--gold-ink)' : isDone ? 'var(--ok)' : 'var(--ink-3)'};">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 700; background: ${isActive ? 'var(--gold)' : isDone ? 'var(--ok)' : 'var(--surface-2)'}; color: ${isActive || isDone ? '#fff' : 'var(--ink-3)'};">
+                ${isDone ? '✓' : s.num}
+              </span>
+              <span class="step-label" style="display: inline-block;">${s.label}</span>
+            </div>
+          `;
+        }).join('<span style="color: var(--line); font-size: 12px;">&rarr;</span>')}
       </div>
+    `;
+  };
 
-      <form id="bookingModalForm">
-        <!-- Room & Stay Settings -->
-        <div class="field-row-3">
-          <div class="field">
-            <label for="bmType">Room Category</label>
-            <select id="bmType">
-              ${types.map(t => `<option value="${esc(t.n)}" ${t.n === selectedType.n ? 'selected' : ''}>${esc(t.n)} (${peso(t.r)}/nt)</option>`).join('')}
-            </select>
-          </div>
-          <div class="field">
-            <label for="bmCi">Check-in Date *</label>
-            <input type="date" id="bmCi" value="${ci}" min="${today()}" required>
-          </div>
-          <div class="field">
-            <label for="bmCo">Check-out Date *</label>
-            <input type="date" id="bmCo" value="${co}" min="${addDays(ci, 1)}" required>
-          </div>
-        </div>
-
-        <!-- Guest Details -->
-        <div class="field-row-2">
-          <div class="field">
-            <label for="bmGuestName">Primary Guest Full Name *</label>
-            <input type="text" id="bmGuestName" value="${esc(guestSession ? guestSession.name : '')}" placeholder="e.g. Maria Santos" required autocomplete="name">
-          </div>
-          <div class="field">
-            <label for="bmGuests">Party Size (Guests) *</label>
-            <input type="number" id="bmGuests" min="1" max="${selectedType.g}" value="${guests}" required>
-          </div>
-        </div>
-
-        <div class="field-row-2">
-          <div class="field">
-            <label for="bmPhone">Philippine Mobile Number *</label>
-            <input type="tel" id="bmPhone" value="${esc(guestSession ? guestSession.phone : '')}" placeholder="+63 917 000 0000" required autocomplete="tel">
-          </div>
-          <div class="field">
-            <label for="bmEmail">Email Address ${isStaffWalkIn ? '(Optional for Walk-in)' : '*'}</label>
-            <input type="email" id="bmEmail" value="${esc(guestSession ? guestSession.email : '')}" placeholder="guest@example.com" ${isStaffWalkIn ? '' : 'required'} autocomplete="email" ${guestSession ? 'readonly style="background: var(--surface-2);"' : ''}>
-          </div>
-        </div>
-
-        ${isStaffWalkIn ? `
-          <!-- Staff Walk-in Verification Details (Required per Terms) -->
-          <div class="field-row-2" style="background: var(--surface-2); padding: 10px 12px; border-radius: var(--r); margin-bottom: 12px; border: 1px solid var(--line);">
-            <div class="field" style="margin: 0;">
-              <label for="bmIdType">Government Photo ID Type *</label>
-              <select id="bmIdType" required>
-                <option value="Driver's License">Driver's License (LTO)</option>
-                <option value="Philippine Passport" selected>Philippine Passport (DFA)</option>
-                <option value="PhilID / National ID">PhilID / National ID (PSA)</option>
-                <option value="UMID">UMID (SSS / GSIS)</option>
-                <option value="PRC ID">Professional ID (PRC)</option>
-                <option value="Postal ID">Postal ID</option>
-              </select>
-            </div>
-            <div class="field" style="margin: 0;">
-              <label for="bmIdNumber">Government ID Number *</label>
-              <input type="text" id="bmIdNumber" placeholder="e.g. P1234567A or N01-12-345678" required>
-            </div>
-          </div>
-
-          <div class="field-row-2" style="margin-bottom: 12px;">
-            <div class="field" style="margin: 0;">
-              <label for="bmRoomAssignment">Assign Specific Room Number</label>
-              <select id="bmRoomAssignment">
-                ${initial.availableRooms.map(rm => `<option value="${rm}">Room ${rm}</option>`).join('')}
-              </select>
-            </div>
-            <div class="field" style="margin: 0; display: flex; align-items: center; padding-top: 22px;">
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
-                <input type="checkbox" id="bmCheckInNow" ${ci === today() ? 'checked' : ''}>
-                <span><b>Check in guest immediately</b> (Arrival Today)</span>
-              </label>
-            </div>
-          </div>
-        ` : ''}
-
-        <!-- Promo Code Section -->
-        <div class="field">
-          <label for="bmPromo">Promotion Voucher Code</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="bmPromo" placeholder="WELCOME10, DINESTAY" style="text-transform: uppercase;" value="${esc(initialPromo)}">
-            <button type="button" class="btn-secondary" id="btnApplyPromo" style="white-space: nowrap;">Apply</button>
-          </div>
-          <div id="bmPromoMsg" class="text-sm" style="margin-top: 4px;"></div>
-        </div>
-
-        <!-- Payment Mode -->
-        <div class="field">
-          <label for="bmPaymentMethod">${isStaffWalkIn ? 'Front Desk Settlement Method' : 'Deposit Settlement Method'}</label>
-          <select id="bmPaymentMethod">
-            ${isStaffWalkIn ? '<option value="Cash" selected>Cash at Front Desk (Official Receipt OR-#####)</option>' : ''}
-            <option value="Credit card">Credit / Debit Card (Visa, MasterCard, JCB)</option>
-            <option value="GCash">GCash E-Wallet</option>
-            <option value="Maya">Maya Digital Bank</option>
-            <option value="Bank Transfer">Bank Wire Transfer (BDO, BPI)</option>
-            ${!isStaffWalkIn ? '<option value="Cash">Cash at Front Desk (Deposit Guarantee)</option>' : ''}
-          </select>
-          <span class="field-hint" style="color: var(--ink-3);">Simulated demo transaction (issues instant BIR-compliant OR-#####)</span>
-        </div>
-
-        <div class="field">
-          <label for="bmNotes">Special Requests &amp; Room Preferences (Optional)</label>
-          <textarea id="bmNotes" rows="2" placeholder="Quiet floor, late check-in, honeymoon setup, airport transfer…"></textarea>
-        </div>
-
-        <!-- Dynamic Financial Breakdown Container -->
-        <div id="bmFinancialSummary" style="background-color: var(--surface-2); padding: 14px 16px; border-radius: var(--r); margin: 16px 0; border: 1px solid var(--line);">
-          <!-- Replaced dynamically without touching inputs -->
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-          <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
-          <button type="submit" class="btn" id="btnConfirmBooking">
-            ${isStaffWalkIn ? 'Confirm Walk-in Booking' : 'Confirm &amp; Pay Deposit'}
-          </button>
-        </div>
-      </form>
+  // Build root modal container
+  const modalShell = `
+    <div id="bookingModalRoot" style="min-height: 380px; font-size: 14px;">
+      <!-- Dynamic Step Content Injected Here -->
     </div>
   `;
 
-  showModal(isStaffWalkIn ? 'Front Desk Walk-In Booking' : 'Reserve Accommodation', bodyHtml, '', {
-    maxWidth: '680px',
+  showModal('Online Room Reservation', modalShell, '', {
+    maxWidth: '700px',
+    onClose() {
+      cleanupTimers();
+    },
     onOpen(modal) {
-      const typeSelect = modal.querySelector('#bmType');
-      const ciInput = modal.querySelector('#bmCi');
-      const coInput = modal.querySelector('#bmCo');
-      const guestInput = modal.querySelector('#bmGuests');
-      const promoBtn = modal.querySelector('#btnApplyPromo');
-      const promoInput = modal.querySelector('#bmPromo');
-      const promoMsg = modal.querySelector('#bmPromoMsg');
-      const finContainer = modal.querySelector('#bmFinancialSummary');
-      const submitBtn = modal.querySelector('#btnConfirmBooking');
-      const form = modal.querySelector('#bookingModalForm');
-      const roomAssignSelect = modal.querySelector('#bmRoomAssignment');
+      const root = modal.querySelector('#bookingModalRoot');
+      if (!root) return;
 
-      const updateSummaryAndPrice = () => {
-        const state = computeState();
+      const render = () => {
+        if (currentStep === 1) renderStep1(root);
+        else if (currentStep === 2) renderStep2(root);
+        else if (currentStep === 3) renderStep3(root);
+        else if (currentStep === 4) renderStep4(root);
+        else if (currentStep === 5) renderStep5(root);
+      };
 
-        const typeNameDisplay = modal.querySelector('#bmTypeNameDisplay');
-        const rateDisplay = modal.querySelector('#bmRateDisplay');
-        const stayInfo = modal.querySelector('#bmStayInfo');
-        const availBadge = modal.querySelector('#bmAvailabilityBadge');
+      // ─────────────────────────────────────────────────────────────
+      // STEP 1: STAY (Public Availability & Rates)
+      // ─────────────────────────────────────────────────────────────
+      const renderStep1 = (container) => {
+        const quote = getQuote();
+        const freeCount = getFreeUnits();
+        const hasCapacity = guests <= selectedType.g;
+        const canProceed = freeCount > 0 && hasCapacity;
 
-        if (typeNameDisplay) typeNameDisplay.textContent = selectedType.n;
-        if (rateDisplay) rateDisplay.textContent = `${peso(selectedType.r)} / night`;
-        if (stayInfo) {
-          stayInfo.innerHTML = `${fmtDate(ci)} – ${fmtDate(co)} &middot; ${state.nights} night${state.nights > 1 ? 's' : ''} &middot; Max ${selectedType.g} guests`;
+        container.innerHTML = `
+          ${renderStepsNav()}
+
+          <!-- Room Summary Card -->
+          <div style="background-color: var(--surface-2); padding: 12px 16px; border-radius: var(--r); margin-bottom: 16px; border: 1px solid var(--line);">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+              <b style="font-size: 16px; color: var(--ink);">${esc(selectedType.n)}</b>
+              <span style="font-size: 15px; font-weight: 600; color: var(--gold-ink);">${peso(selectedType.r)} / night</span>
+            </div>
+            <div class="text-sm text-secondary" style="margin-top: 4px;">
+              ${fmtDate(ci)} – ${fmtDate(co)} &middot; ${quote.nights} night${quote.nights > 1 ? 's' : ''} &middot; Max ${selectedType.g} guests
+            </div>
+            <div style="margin-top: 6px;">
+              ${!hasCapacity
+                ? `<span class="pill pill--bad">Exceeds room capacity (Max ${selectedType.g} guests)</span>`
+                : freeCount > 0
+                  ? `<span class="pill pill--ok">${freeCount} room${freeCount > 1 ? 's' : ''} available</span>`
+                  : `<span class="pill pill--bad">Fully booked for selected dates</span>`
+              }
+            </div>
+          </div>
+
+          <form id="step1Form" onsubmit="return false;">
+            <div class="field-row-3">
+              <div class="field">
+                <label for="s1Type">Room Category</label>
+                <select id="s1Type">
+                  ${types.map(t => `<option value="${esc(t.n)}" ${t.n === selectedType.n ? 'selected' : ''}>${esc(t.n)} (${peso(t.r)}/nt)</option>`).join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label for="s1Ci">Check-in Date *</label>
+                <input type="date" id="s1Ci" value="${ci}" min="${today()}" required>
+              </div>
+              <div class="field">
+                <label for="s1Co">Check-out Date *</label>
+                <input type="date" id="s1Co" value="${co}" min="${addDays(ci, 1)}" required>
+              </div>
+            </div>
+
+            <div class="field-row-2">
+              <div class="field">
+                <label for="s1Guests">Party Size (Guests) *</label>
+                <input type="number" id="s1Guests" min="1" max="${selectedType.g}" value="${guests}" required>
+              </div>
+              <div class="field">
+                <label for="s1Promo">Promotion Voucher Code</label>
+                <div style="display: flex; gap: 6px;">
+                  <input type="text" id="s1Promo" placeholder="WELCOME10" style="text-transform: uppercase;" value="${esc(promoCode)}">
+                  <button type="button" class="btn-secondary" id="btnS1ApplyPromo" style="white-space: nowrap;">Apply</button>
+                </div>
+                <div id="s1PromoMsg" class="text-xs" style="margin-top: 3px;">
+                  ${activePromo ? `<span style="color: var(--ok); font-weight: 600;">Applied: ${esc(activePromo.title || activePromo.code)}</span>` : ''}
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic Pricing Preview -->
+            <div style="background-color: var(--surface-2); padding: 14px 16px; border-radius: var(--r); margin: 16px 0; border: 1px solid var(--line); font-size: 13px;">
+              <div style="display: flex; justify-content: space-between; padding: 2px 0;">
+                <span class="text-secondary">Room accommodation (${quote.nights} nights &times; ${peso(selectedType.r)}):</span>
+                <b>${peso(quote.subtotal)}</b>
+              </div>
+              ${activePromo ? `
+                <div style="display: flex; justify-content: space-between; padding: 2px 0; color: var(--ok);">
+                  <span>Promotion Discount (${activePromo.code}):</span>
+                  <b>&minus; ${peso(quote.discount)}</b>
+                </div>
+              ` : ''}
+              <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px; color: var(--ink-3);">
+                <span>BIR VAT (${CONFIG.tax.vatPct}%) &amp; Service Charge (${CONFIG.tax.svcPct}%):</span>
+                <span>Included in tariff</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); margin-top: 6px; font-size: 15px;">
+                <b>Total Stay Tariff:</b>
+                <b style="color: var(--ink); font-size: 16px;">${peso(quote.total)}</b>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 4px 0; color: var(--gold-ink); font-weight: 600;">
+                <span>Pay Now (${CONFIG.depositPct}% Down Payment):</span>
+                <span style="font-size: 16px;">${peso(quote.depositDue)}</span>
+              </div>
+              <div class="text-xs" style="color: var(--ink-3); margin-top: 4px;">
+                Remaining balance of ${peso(quote.balanceDue)} is settled upon check-in or via the Guest Portal.
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+              <button type="button" class="btn-ghost" onclick="closeModal()">Cancel</button>
+              <button type="button" class="btn" id="btnStep1Continue" ${!canProceed ? 'disabled' : ''}>
+                Reserve Room &rarr;
+              </button>
+            </div>
+          </form>
+        `;
+
+        // Event Listeners for Step 1
+        const typeSelect = container.querySelector('#s1Type');
+        const ciInput = container.querySelector('#s1Ci');
+        const coInput = container.querySelector('#s1Co');
+        const guestInput = container.querySelector('#s1Guests');
+        const promoInput = container.querySelector('#s1Promo');
+        const promoBtn = container.querySelector('#btnS1ApplyPromo');
+        const continueBtn = container.querySelector('#btnStep1Continue');
+
+        if (typeSelect) {
+          typeSelect.onchange = () => {
+            selectedType = types.find(t => t.n === typeSelect.value) || types[0];
+            render();
+          };
         }
-        if (availBadge) {
-          if (!state.hasCapacity) {
-            availBadge.innerHTML = `<span class="pill pill--bad">Exceeds capacity (Max ${selectedType.g} guests)</span>`;
-          } else if (state.availableRooms.length > 0) {
-            availBadge.innerHTML = `<span class="pill pill--ok">${state.availableRooms.length} room${state.availableRooms.length > 1 ? 's' : ''} available</span>`;
-          } else {
-            availBadge.innerHTML = `<span class="pill pill--bad">Fully booked for selected dates</span>`;
-          }
+        if (ciInput) {
+          ciInput.onchange = () => {
+            ci = ciInput.value;
+            const minCo = addDays(ci, 1);
+            if (co <= ci) co = minCo;
+            render();
+          };
+        }
+        if (coInput) {
+          coInput.onchange = () => {
+            co = coInput.value;
+            render();
+          };
+        }
+        if (guestInput) {
+          guestInput.oninput = () => {
+            guests = Number(guestInput.value || 1);
+            render();
+          };
+        }
+        if (promoBtn && promoInput) {
+          promoBtn.onclick = () => {
+            const code = promoInput.value.trim().toUpperCase();
+            if (!code) {
+              activePromo = null;
+              promoCode = '';
+              render();
+              return;
+            }
+            const validation = typeof Data !== 'undefined' && Data.validatePromo ? Data.validatePromo(code, {
+              scope: 'rooms',
+              nights: dateDiff(ci, co),
+              spend: dateDiff(ci, co) * selectedType.r
+            }) : { valid: false, error: 'Promo code unavailable' };
+
+            if (validation.valid) {
+              activePromo = validation.promo;
+              promoCode = code;
+              toast(`Promo ${code} applied successfully!`, 'ok');
+            } else {
+              activePromo = null;
+              toast(validation.error || 'Invalid promotion voucher', 'warn');
+            }
+            render();
+          };
         }
 
-        if (roomAssignSelect) {
-          roomAssignSelect.innerHTML = state.availableRooms.length > 0
-            ? state.availableRooms.map(rm => `<option value="${rm}">Room ${rm}</option>`).join('')
-            : '<option value="0">No rooms available</option>';
+        if (continueBtn) {
+          continueBtn.onclick = () => {
+            // Unauthenticated visitors hitting commit get the Auth Gate
+            if (!guestSession) {
+              closeModal();
+              showAuthGateModal({
+                type: 'room',
+                roomType: selectedType.n,
+                ci,
+                co,
+                guests,
+                promo: activePromo ? activePromo.code : ''
+              });
+              return;
+            }
+            currentStep = 2;
+            render();
+          };
+        }
+      };
+
+      // ─────────────────────────────────────────────────────────────
+      // STEP 2: GUEST DETAILS (Prefilled from session, validated)
+      // ─────────────────────────────────────────────────────────────
+      const renderStep2 = (container) => {
+        container.innerHTML = `
+          ${renderStepsNav()}
+
+          <div style="margin-bottom: 16px;">
+            <h3 style="margin: 0 0 4px; font-size: 18px; font-family: 'Cormorant Garamond', serif;">Guest Information</h3>
+            <p class="text-secondary text-sm" style="margin: 0;">
+              Confirm primary contact details for instant confirmation delivery and check-in verification.
+            </p>
+          </div>
+
+          <form id="step2Form" onsubmit="return false;">
+            <div class="field-row-2">
+              <div class="field">
+                <label for="s2GuestName">Primary Guest Full Name *</label>
+                <input type="text" id="s2GuestName" value="${esc(guestName)}" placeholder="Maria Santos" required autocomplete="name">
+              </div>
+              <div class="field">
+                <label for="s2Phone">Philippine Mobile Number *</label>
+                <input type="tel" id="s2Phone" value="${esc(guestPhone)}" placeholder="+63 917 123 4567" required autocomplete="tel">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="s2Email">Email Address (Read-only on Guest Session) *</label>
+              <input type="email" id="s2Email" value="${esc(guestEmail)}" readonly style="background: var(--surface-2); color: var(--ink-2);" required autocomplete="email">
+              <span class="field-hint" style="font-size: 11px; color: var(--ink-3);">Confirmation voucher and Official Receipt (OR) will be dispatched to this email.</span>
+            </div>
+
+            <div class="field">
+              <label for="s2Notes">Special Requests &amp; Preferences (Optional)</label>
+              <textarea id="s2Notes" rows="2" placeholder="Quiet high floor, extra pillows, anticipated arrival time…">${esc(guestNotes)}</textarea>
+            </div>
+
+            <div class="banner banner--info" style="font-size: 12px; margin-top: 14px; padding: 10px 12px; background: var(--surface-2); border-radius: var(--r); border: 1px solid var(--line);">
+              <span class="ic" data-icon="shield">[ICON: shield]</span>
+              Government photo ID is not required during online reservation. ID verification occurs seamlessly at Front Desk check-in.
+            </div>
+
+            <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
+              <button type="button" class="btn-secondary" id="btnStep2Back">&larr; Back to Stay</button>
+              <button type="button" class="btn" id="btnStep2Continue">Review Pricing &amp; Terms &rarr;</button>
+            </div>
+          </form>
+        `;
+
+        const backBtn = container.querySelector('#btnStep2Back');
+        const contBtn = container.querySelector('#btnStep2Continue');
+
+        if (backBtn) {
+          backBtn.onclick = () => {
+            currentStep = 1;
+            render();
+          };
         }
 
-        if (finContainer) {
-          finContainer.innerHTML = `
+        if (contBtn) {
+          contBtn.onclick = () => {
+            const nameVal = (container.querySelector('#s2GuestName')?.value || '').trim();
+            const phoneVal = (container.querySelector('#s2Phone')?.value || '').trim();
+            const notesVal = (container.querySelector('#s2Notes')?.value || '').trim();
+
+            if (nameVal.length < 2) {
+              toast('Please enter primary guest full name', 'warn');
+              container.querySelector('#s2GuestName')?.focus();
+              return;
+            }
+            if (typeof isValidPhMobile === 'function' && !isValidPhMobile(phoneVal)) {
+              toast('Please enter a valid Philippine mobile number (e.g. +63 917 123 4567)', 'warn');
+              container.querySelector('#s2Phone')?.focus();
+              return;
+            }
+
+            guestName = nameVal;
+            guestPhone = phoneVal;
+            guestNotes = notesVal;
+            currentStep = 3;
+            render();
+          };
+        }
+      };
+
+      // ─────────────────────────────────────────────────────────────
+      // STEP 3: REVIEW (Pricing breakdown, deposit box, policy tick)
+      // ─────────────────────────────────────────────────────────────
+      const renderStep3 = (container) => {
+        const quote = getQuote();
+        const cancelPolicyText = `Free cancellation up to ${CONFIG.freeCancelDays || 3} days before arrival. Cancellations made less than ${CONFIG.freeCancelDays || 3} days before arrival are refunded less a ${CONFIG.lateCancelFeePct || 30}% deduction. No-shows are not refunded. Remaining balance of ${peso(quote.balanceDue)} is collected upon check-in.`;
+
+        container.innerHTML = `
+          ${renderStepsNav()}
+
+          <div style="margin-bottom: 14px;">
+            <h3 style="margin: 0 0 4px; font-size: 18px; font-family: 'Cormorant Garamond', serif;">Review Reservation &amp; Guarantee Terms</h3>
+            <p class="text-secondary text-sm" style="margin: 0;">
+              Confirm accommodation tariffs and payment schedule before locking your room inventory.
+            </p>
+          </div>
+
+          <!-- Stay Overview Summary -->
+          <div style="background-color: var(--surface-2); padding: 12px 16px; border-radius: var(--r); margin-bottom: 14px; border: 1px solid var(--line); font-size: 13px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div><b>Room Category:</b> ${esc(selectedType.n)}</div>
+              <div><b>Stay Dates:</b> ${fmtDate(ci)} – ${fmtDate(co)} (${quote.nights} nights)</div>
+              <div><b>Primary Guest:</b> ${esc(guestName)}</div>
+              <div><b>Contact:</b> ${esc(guestPhone)} &middot; ${esc(guestEmail)}</div>
+            </div>
+            ${guestNotes ? `<div style="margin-top: 8px; font-size: 12px; color: var(--ink-2);"><b>Requests:</b> ${esc(guestNotes)}</div>` : ''}
+          </div>
+
+          <!-- Detailed Tariff Breakdown -->
+          <div style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; font-size: 13px; margin-bottom: 14px;">
             <div style="display: flex; justify-content: space-between; padding: 2px 0;">
-              <span class="text-secondary">Room accommodation (${state.nights} nights &times; ${peso(selectedType.r)}):</span>
-              <b>${peso(state.baseTotal)}</b>
+              <span class="text-secondary">Room accommodation (${quote.nights} nights &times; ${peso(selectedType.r)}):</span>
+              <b>${peso(quote.subtotal)}</b>
             </div>
             ${activePromo ? `
               <div style="display: flex; justify-content: space-between; padding: 2px 0; color: var(--ok);">
                 <span>Promotion Discount (${activePromo.code}):</span>
-                <b>&minus; ${peso(state.discount)}</b>
+                <b>&minus; ${peso(quote.discount)}</b>
               </div>
             ` : ''}
             <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px; color: var(--ink-3);">
-              <span>VAT (${CONFIG.tax.vatPct}%) &amp; Service Charge (${CONFIG.tax.svcPct}%):</span>
-              <span>${peso(state.taxes.vat + state.taxes.svc)} (included)</span>
+              <span>Statutory VAT (${CONFIG.tax.vatPct}%) &amp; Service Charge (${CONFIG.tax.svcPct}%):</span>
+              <span>${peso(quote.taxes.vat + quote.taxes.svc)} (included)</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); margin-top: 6px; font-size: 15px;">
-              <b>Total Accommodation Rate:</b>
-              <b style="color: var(--ink); font-size: 16px;">${peso(state.netTotal)}</b>
+              <b>Total Stay Tariff:</b>
+              <b style="color: var(--ink); font-size: 16px;">${peso(quote.total)}</b>
             </div>
-            <div style="display: flex; justify-content: space-between; padding: 4px 0; color: var(--gold-ink); font-weight: 600;">
-              <span>50% Guarantee Deposit Due:</span>
-              <span style="font-size: 16px;">${peso(state.depDue)}</span>
+          </div>
+
+          <!-- Highlighted Required Deposit Box -->
+          <div style="background: rgba(184, 137, 26, 0.08); border: 2px solid var(--gold); border-radius: var(--r); padding: 14px 16px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-weight: 700; color: var(--gold-ink); font-size: 15px;">
+                Pay now (${CONFIG.depositPct}% down payment):
+              </span>
+              <span style="font-size: 20px; font-weight: 700; color: var(--gold-ink);">
+                ${peso(quote.depositDue)}
+              </span>
             </div>
-            <div class="text-sm" style="color: var(--ink-3); margin-top: 4px;">
-              Remaining balance of ${peso(state.balDue)} is settled upon check-in or via the Guest Portal.
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--ink-2);">
+              <span>Balance due at check-in:</span>
+              <span style="font-weight: 600;">${peso(quote.balanceDue)}</span>
+            </div>
+            <div class="text-xs" style="color: var(--ink-3); margin-top: 6px;">
+              Your booking is confirmed instantly once payment succeeds.
+            </div>
+          </div>
+
+          <!-- Policy Tick Box -->
+          <div style="margin-bottom: 18px; background: var(--surface-2); padding: 12px; border-radius: var(--r); border: 1px solid var(--line);">
+            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px;">
+              <input type="checkbox" id="s3PolicyTick" ${policyAgreed ? 'checked' : ''} style="margin-top: 2px;">
+              <span>
+                I have read and agree to the <b>Cancellation &amp; Deposit Policy</b>:<br>
+                <span class="text-secondary text-xs">${cancelPolicyText}</span>
+              </span>
+            </label>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; gap: 10px;">
+            <button type="button" class="btn-secondary" id="btnStep3Back">&larr; Back to Guest</button>
+            <button type="button" class="btn" id="btnStep3StartHold" ${!policyAgreed ? 'disabled' : ''}>
+              Pay ${peso(quote.depositDue)} and Confirm Booking &rarr;
+            </button>
+          </div>
+        `;
+
+        const policyTick = container.querySelector('#s3PolicyTick');
+        const startHoldBtn = container.querySelector('#btnStep3StartHold');
+        const backBtn = container.querySelector('#btnStep3Back');
+
+        if (policyTick && startHoldBtn) {
+          policyTick.onchange = () => {
+            policyAgreed = policyTick.checked;
+            startHoldBtn.disabled = !policyAgreed;
+          };
+        }
+
+        if (backBtn) {
+          backBtn.onclick = () => {
+            currentStep = 2;
+            render();
+          };
+        }
+
+        if (startHoldBtn) {
+          startHoldBtn.onclick = () => {
+            if (!policyAgreed) {
+              toast('Please accept the cancellation & deposit policy to proceed.', 'warn');
+              return;
+            }
+
+            startHoldBtn.disabled = true;
+            startHoldBtn.textContent = 'Securing Inventory Hold…';
+
+            try {
+              if (typeof PUPSJ_Services === 'undefined' || !PUPSJ_Services.BookingService) {
+                throw new Error('BookingService unavailable');
+              }
+
+              const holdRes = PUPSJ_Services.BookingService.startHold(guestSession, {
+                typeId: selectedType.n,
+                checkIn: ci,
+                checkOut: co,
+                guests,
+                promoCode: activePromo ? activePromo.code : '',
+                notes: guestNotes
+              });
+
+              if (!holdRes || (holdRes.ok === false && !holdRes.data)) {
+                const errMsg = holdRes?.error || holdRes?.code || 'Unable to hold room';
+                throw new Error(errMsg);
+              }
+
+              const hold = (holdRes && holdRes.data) ? holdRes.data : holdRes;
+              activeHold = hold;
+              attemptsMade = hold.attempts || 0;
+              inlinePayError = '';
+              currentStep = 4;
+              render();
+            } catch (err) {
+              startHoldBtn.disabled = false;
+              startHoldBtn.textContent = `Pay ${peso(quote.depositDue)} and Confirm Booking →`;
+              if (err.message === 'NO_AVAILABILITY') {
+                toast('Sorry, all units of this category were just locked or booked by other guests. Please select other dates.', 'bad');
+              } else {
+                toast(err.message || 'Unable to hold room', 'bad');
+              }
+            }
+          };
+        }
+      };
+
+      // ─────────────────────────────────────────────────────────────
+      // STEP 4: PAY (Inventory hold countdown, Card/GCash/Maya/Bank)
+      // ─────────────────────────────────────────────────────────────
+      const renderStep4 = (container) => {
+        cleanupTimers();
+
+        if (!activeHold) {
+          currentStep = 1;
+          render();
+          return;
+        }
+
+        const holdData = (activeHold && activeHold.data) ? activeHold.data : activeHold;
+        const quote = (holdData && holdData.quoteSnapshot) ? holdData.quoteSnapshot : getQuote();
+        const attemptsLeft = Math.max(0, (CONFIG.maxPayAttempts || 3) - attemptsMade);
+
+        // Helper: Format countdown mm:ss
+        const getRemainingSec = () => {
+          const expMs = new Date(holdData.expiresAt || activeHold.expiresAt).getTime();
+          const nowMs = Date.now();
+          return Math.max(0, Math.floor((expMs - nowMs) / 1000));
+        };
+
+        const remainingSec = getRemainingSec();
+        if (remainingSec <= 0) {
+          renderHoldExpired(container);
+          return;
+        }
+
+        const isAmber = remainingSec < 120;
+        const minStr = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+        const secStr = String(remainingSec % 60).padStart(2, '0');
+
+        container.innerHTML = `
+          ${renderStepsNav()}
+
+          <!-- Inventory Hold Countdown Banner -->
+          <div id="holdBanner" style="background: ${isAmber ? 'rgba(217, 119, 6, 0.12)' : 'var(--surface-2)'}; border: 1px solid ${isAmber ? 'var(--warn)' : 'var(--line)'}; border-radius: var(--r); padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: ${isAmber ? 'var(--warn)' : 'var(--gold-ink)'};">
+                [PLACEHOLDER: Lock Badge - Insert inventory hold padlock icon here] Room Inventory Locked &middot; Hold ${activeHold.holdId}
+              </div>
+              <div class="text-xs text-muted" style="margin-top: 2px;">
+                Complete down payment before timer expires to guarantee your booking.
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div id="holdTimerDisplay" aria-live="polite" style="font-size: 24px; font-weight: 700; font-family: monospace; color: ${isAmber ? 'var(--warn)' : 'var(--ink)'};">
+                ${minStr}:${secStr}
+              </div>
+              <div class="text-xs text-secondary">
+                Attempts Left: <b>${attemptsLeft}</b>
+              </div>
+            </div>
+          </div>
+          <!-- Screen Reader Accessible Announcer -->
+          <div id="holdAnnouncer" aria-live="polite" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;"></div>
+
+          ${inlinePayError ? `
+            <div class="banner banner--bad" style="margin-bottom: 14px; padding: 10px 14px;">
+              <span class="ic" data-icon="alert">[ICON: alert]</span>
+              <span>${esc(inlinePayError)}</span>
+            </div>
+          ` : ''}
+
+          <!-- Payment Method Tabs -->
+          <div class="tabs" style="margin-bottom: 16px;">
+            <button type="button" class="tab-btn ${paymentMethod === 'card' ? 'active' : ''}" id="tabPayCard">
+              <span class="ic" data-icon="credit-card">[ICON: credit-card]</span> Credit / Debit Card
+            </button>
+            <button type="button" class="tab-btn ${paymentMethod === 'gcash' ? 'active' : ''}" id="tabPayGcash">
+              GCash
+            </button>
+            <button type="button" class="tab-btn ${paymentMethod === 'maya' ? 'active' : ''}" id="tabPayMaya">
+              Maya
+            </button>
+            <button type="button" class="tab-btn ${paymentMethod === 'bank' ? 'active' : ''}" id="tabPayBank">
+              Bank Transfer (QR Ph)
+            </button>
+          </div>
+
+          <!-- Form Area for Selected Method -->
+          <div id="payMethodContainer" style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; margin-bottom: 16px;">
+            ${renderPaymentMethodForm(quote)}
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
+            <a href="javascript:void(0)" id="btnCancelReleaseHold" class="text-sm" style="color: var(--bad); text-decoration: underline;">
+              Cancel and release room
+            </a>
+            <span class="text-xs text-muted">
+              Secure 256-bit simulated transaction
+            </span>
+          </div>
+        `;
+
+        // Start Hold Countdown Timer
+        timerInterval = setInterval(() => {
+          const sec = getRemainingSec();
+          const timerEl = container.querySelector('#holdTimerDisplay');
+          const bannerEl = container.querySelector('#holdBanner');
+          const announcer = container.querySelector('#holdAnnouncer');
+
+          if (sec <= 0) {
+            cleanupTimers();
+            if (typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.HoldService) {
+              PUPSJ_Services.HoldService.expire();
+            }
+            renderHoldExpired(container);
+            return;
+          }
+
+          const m = String(Math.floor(sec / 60)).padStart(2, '0');
+          const s = String(sec % 60).padStart(2, '0');
+          if (timerEl) timerEl.textContent = `${m}:${s}`;
+
+          // Amber under 2 minutes
+          if (sec < 120 && timerEl && bannerEl) {
+            timerEl.style.color = 'var(--warn)';
+            bannerEl.style.borderColor = 'var(--warn)';
+          }
+
+          // Accessible voice announcements at 5:00, 1:00, and 0:00
+          if (sec === 300 && announcer) announcer.textContent = 'Room hold alert: 5 minutes remaining to complete payment.';
+          if (sec === 60 && announcer) announcer.textContent = 'Room hold alert: 1 minute remaining.';
+        }, 1000);
+
+        // Bind Method Tabs
+        const btnCard = container.querySelector('#tabPayCard');
+        const btnGcash = container.querySelector('#tabPayGcash');
+        const btnMaya = container.querySelector('#tabPayMaya');
+        const btnBank = container.querySelector('#tabPayBank');
+        const cancelHoldBtn = container.querySelector('#btnCancelReleaseHold');
+
+        if (btnCard) btnCard.onclick = () => { paymentMethod = 'card'; inlinePayError = ''; render(); };
+        if (btnGcash) btnGcash.onclick = () => { paymentMethod = 'gcash'; inlinePayError = ''; render(); };
+        if (btnMaya) btnMaya.onclick = () => { paymentMethod = 'maya'; inlinePayError = ''; render(); };
+        if (btnBank) btnBank.onclick = () => { paymentMethod = 'bank'; inlinePayError = ''; render(); };
+
+        if (cancelHoldBtn) {
+          cancelHoldBtn.onclick = () => {
+            cleanupTimers();
+            if (typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.HoldService) {
+              PUPSJ_Services.HoldService.releaseHold(activeHold.holdId);
+            }
+            activeHold = null;
+            toast('Room hold released.', 'info');
+            currentStep = 1;
+            render();
+          };
+        }
+
+        bindPaymentMethodEvents(container);
+      };
+
+      const renderPaymentMethodForm = (quote) => {
+        const depAmt = peso(quote.depositDue);
+
+        if (paymentMethod === 'card') {
+          return `
+            <form id="cardPayForm" onsubmit="return false;">
+              <div class="field">
+                <label for="payCardName">Cardholder Full Name *</label>
+                <input type="text" id="payCardName" value="${esc(guestName)}" placeholder="Maria Santos" required autocomplete="cc-name">
+              </div>
+              <div class="field">
+                <label for="payCardNumber">Credit / Debit Card Number *</label>
+                <input type="text" id="payCardNumber" placeholder="4242 4242 4242 4242" maxlength="19" required autocomplete="cc-number">
+              </div>
+              <div class="field-row-2">
+                <div class="field">
+                  <label for="payCardExp">Expiry Date (MM/YY) *</label>
+                  <input type="text" id="payCardExp" placeholder="12/28" maxlength="5" required autocomplete="cc-exp">
+                </div>
+                <div class="field">
+                  <label for="payCardCvv">CVV Security Code *</label>
+                  <input type="password" id="payCardCvv" placeholder="123" maxlength="4" required autocomplete="cc-csc">
+                </div>
+              </div>
+
+              ${CONFIG.demoLogins ? `
+                <details style="margin: 10px 0; font-size: 12px; background: var(--surface-2); padding: 8px 12px; border-radius: var(--r); border: 1px solid var(--line);">
+                  <summary style="cursor: pointer; font-weight: 600; color: var(--gold-ink);">Demo Test Cards (Click to auto-fill)</summary>
+                  <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                    <a href="javascript:void(0)" class="demo-card-fill" data-card="4242424242424242" data-exp="12/28" data-cvv="123" style="color: var(--ok); text-decoration: underline;">4242 4242 4242 4242 &middot; Succeeded</a>
+                    <a href="javascript:void(0)" class="demo-card-fill" data-card="4000000000000002" data-exp="12/28" data-cvv="123" style="color: var(--warn); text-decoration: underline;">4000 0000 0000 0002 &middot; Card Declined</a>
+                    <a href="javascript:void(0)" class="demo-card-fill" data-card="4000000000009995" data-exp="12/28" data-cvv="123" style="color: var(--warn); text-decoration: underline;">4000 0000 0000 9995 &middot; Insufficient Funds</a>
+                    <a href="javascript:void(0)" class="demo-card-fill" data-card="4000000000000069" data-exp="01/20" data-cvv="123" style="color: var(--bad); text-decoration: underline;">4000 0000 0000 0069 &middot; Expired Card</a>
+                  </div>
+                </details>
+              ` : ''}
+
+              <button type="button" class="btn btn-block" id="btnSubmitCardPayment" style="margin-top: 10px;">
+                Pay Down Payment ${depAmt} &rarr;
+              </button>
+            </form>
+          `;
+        }
+
+        if (paymentMethod === 'gcash' || paymentMethod === 'maya') {
+          const brand = paymentMethod === 'gcash' ? 'GCash' : 'Maya';
+          return `
+            <div style="text-align: center; padding: 10px 0;">
+              <div style="font-size: 13px; font-weight: 600; color: var(--gold-ink); margin-bottom: 8px;">[PLACEHOLDER: Mobile Phone Icon - Insert mobile wallet phone graphic here]</div>
+              <h4 style="margin: 0 0 6px; font-size: 16px;">Simulated ${brand} E-Wallet Authorization</h4>
+              <p class="text-secondary text-sm" style="margin: 0 auto 14px; max-width: 400px;">
+                Authenticate down payment of <b>${depAmt}</b> via your registered mobile number (${esc(guestPhone)}).
+              </p>
+              <button type="button" class="btn" id="btnOpenWalletSheet">
+                Open Simulated ${brand} Sheet &rarr;
+              </button>
             </div>
           `;
         }
 
-        if (submitBtn) {
-          submitBtn.disabled = !state.canBook;
-          submitBtn.innerHTML = state.canBook
-            ? (isStaffWalkIn ? `Confirm Walk-in Booking (${peso(state.depDue)})` : `Confirm &amp; Pay Deposit (${peso(state.depDue)})`)
-            : (!state.hasCapacity ? 'Exceeds Room Capacity' : 'Unavailable for Dates');
+        if (paymentMethod === 'bank') {
+          const banks = [
+            'BDO Unibank',
+            'BPI (Bank of the Philippine Islands)',
+            'Metrobank',
+            'UnionBank of the Philippines',
+            'Landbank of the Philippines',
+            'RCBC',
+            'Security Bank'
+          ];
+          const refCode = `PUP-${activeHold.holdId}`;
+          return `
+            <div>
+              <div style="margin-bottom: 12px;">
+                <label for="bankSelect" style="font-size: 13px; font-weight: 600;">Select Originating Bank</label>
+                <select id="bankSelect" style="margin-top: 4px;">
+                  ${banks.map(b => `<option value="${b}" ${b === selectedBank ? 'selected' : ''}>${b}</option>`).join('')}
+                </select>
+              </div>
+
+              <div style="background: var(--surface-2); padding: 12px; border-radius: var(--r); border: 1px solid var(--line); margin-bottom: 14px; font-size: 13px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>Reference Code:</span>
+                  <b style="font-family: monospace;">${refCode}</b>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                  <span>Settlement Amount:</span>
+                  <b style="color: var(--gold-ink);">${depAmt}</b>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                  <span>Payment Window:</span>
+                  <span>${CONFIG.bankHoldMinutes || 30} Minutes (Auto-confirmed upon callback)</span>
+                </div>
+              </div>
+
+              <!-- QR Ph Code Placeholder -->
+              <div style="text-align: center; margin: 14px 0;">
+                <div style="display: inline-block; padding: 14px; background: #fff; border-radius: 8px; border: 1px solid var(--line); color: #000; font-family: monospace; font-size: 11px;">
+                  <div style="font-size: 11px; margin-bottom: 4px; font-weight: 600; color: #333;">[PLACEHOLDER: Phone Device Icon - Insert mobile QR scanner graphic here]</div>
+                  <div style="font-weight: 700; margin-top: 4px;">[IMAGE: QR Ph code, 1:1]</div>
+                  <div style="font-size: 10px; color: #555;">Scan with any PH banking app</div>
+                </div>
+              </div>
+
+              <div style="text-align: center;">
+                <button type="button" class="btn" id="btnLaunchBankSheet">
+                  Launch Simulated Online Banking / QR Ph Gateway &rarr;
+                </button>
+              </div>
+            </div>
+          `;
         }
       };
 
-      if (typeSelect) {
-        typeSelect.onchange = () => {
-          selectedType = types.find(t => t.n === typeSelect.value) || types[0];
-          if (guestInput) guestInput.max = selectedType.g;
-          updateSummaryAndPrice();
-        };
-      }
+      const bindPaymentMethodEvents = (container) => {
+        // 1. Card Auto-Fill & Submission
+        container.querySelectorAll('.demo-card-fill').forEach(link => {
+          link.onclick = () => {
+            const num = link.dataset.card;
+            const exp = link.dataset.exp;
+            const cvv = link.dataset.cvv;
+            const numInp = container.querySelector('#payCardNumber');
+            const expInp = container.querySelector('#payCardExp');
+            const cvvInp = container.querySelector('#payCardCvv');
+            if (numInp) numInp.value = num;
+            if (expInp) expInp.value = exp;
+            if (cvvInp) cvvInp.value = cvv;
+          };
+        });
 
-      if (ciInput) {
-        ciInput.onchange = () => {
-          ci = ciInput.value;
-          const minCo = addDays(ci, 1);
-          if (co <= ci) {
-            co = minCo;
-            if (coInput) coInput.value = co;
-          }
-          if (coInput) coInput.min = minCo;
-          updateSummaryAndPrice();
-        };
-      }
+        const submitCardBtn = container.querySelector('#btnSubmitCardPayment');
+        if (submitCardBtn) {
+          submitCardBtn.onclick = () => {
+            const name = (container.querySelector('#payCardName')?.value || '').trim();
+            const cardNumber = (container.querySelector('#payCardNumber')?.value || '').trim();
+            const exp = (container.querySelector('#payCardExp')?.value || '').trim();
+            const cvv = (container.querySelector('#payCardCvv')?.value || '').trim();
 
-      if (coInput) {
-        coInput.onchange = () => {
-          co = coInput.value;
-          updateSummaryAndPrice();
-        };
-      }
-
-      if (guestInput) {
-        guestInput.oninput = () => {
-          guests = Number(guestInput.value || 1);
-          updateSummaryAndPrice();
-        };
-      }
-
-      if (promoBtn && promoInput) {
-        const applyPromoCode = (code) => {
-          if (!code) {
-            activePromo = null;
-            if (promoMsg) promoMsg.innerHTML = '';
-            updateSummaryAndPrice();
-            return;
-          }
-          const validation = Data.validatePromo(code, {
-            scope: 'rooms',
-            nights: dateDiff(ci, co),
-            spend: dateDiff(ci, co) * selectedType.r
-          });
-          if (validation.valid) {
-            activePromo = validation.promo;
-            if (promoMsg) {
-              promoMsg.innerHTML = `<span style="color: var(--ok); font-weight: 600;">Promo code applied: ${esc(activePromo.title)}</span>`;
+            if (!name || !cardNumber || !exp || !cvv) {
+              toast('Please complete all card details', 'warn');
+              return;
             }
-            toast(`Promo ${code} applied successfully`, 'ok');
-          } else {
-            activePromo = null;
-            if (promoMsg) {
-              promoMsg.innerHTML = `<span style="color: var(--bad);">${esc(validation.error)}</span>`;
+
+            submitCardBtn.disabled = true;
+            submitCardBtn.textContent = 'Processing Payment…';
+
+            try {
+              const res = PUPSJ_Services.PaymentService.pay(activeHold.holdId, 'card', {
+                name,
+                cardNumber,
+                exp,
+                cvv
+              });
+
+              if (res.ok || res.success) {
+                cleanupTimers();
+                confirmedReservation = res.data || res.reservation;
+                currentStep = 5;
+                render();
+              } else {
+                attemptsMade = res.attempts;
+                inlinePayError = res.error || 'Card transaction declined';
+                if (res.holdExpired) {
+                  renderHoldExpired(container);
+                } else {
+                  render();
+                }
+              }
+            } catch (err) {
+              submitCardBtn.disabled = false;
+              submitCardBtn.textContent = `Pay Down Payment ${peso(quote.depositDue)} →`;
+              inlinePayError = err.message || 'Payment failed';
+              render();
             }
-            toast(validation.error, 'warn');
-          }
-          updateSummaryAndPrice();
-        };
-
-        promoBtn.onclick = () => applyPromoCode(promoInput.value.trim().toUpperCase());
-        promoInput.onkeydown = e => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            applyPromoCode(promoInput.value.trim().toUpperCase());
-          }
-        };
-
-        if (initialPromo) {
-          applyPromoCode(initialPromo.toUpperCase());
+          };
         }
-      }
 
-      updateSummaryAndPrice();
+        // 2. GCash / Maya Simulated Sheet
+        const walletBtn = container.querySelector('#btnOpenWalletSheet');
+        if (walletBtn) {
+          walletBtn.onclick = () => {
+            const brand = paymentMethod === 'gcash' ? 'GCash' : 'Maya';
+            const depAmt = peso(quote.depositDue);
+            const ref = 'PUP-WALLET-' + Date.now().toString().slice(-6);
 
-      if (form) {
-        form.onsubmit = e => {
-          e.preventDefault();
+            const sheetHtml = `
+              <div style="text-align: center; padding: 10px 0;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--gold-ink); margin-bottom: 8px;">[PLACEHOLDER: Payment Card Icon - Insert credit card / payment method icon here]</div>
+                <h3 style="margin: 0 0 4px; font-size: 20px;">${brand} Express Checkout</h3>
+                <p class="text-secondary text-sm" style="margin: 0 0 16px;">
+                  Merchant: <b>${CONFIG.hotelName}</b> &middot; Ref: <b>${ref}</b>
+                </p>
+                <div style="background: var(--surface-2); padding: 14px; border-radius: var(--r); margin-bottom: 16px; border: 1px solid var(--line);">
+                  <div class="text-xs text-secondary">Authorized Payment Amount</div>
+                  <div style="font-size: 24px; font-weight: 700; color: var(--gold-ink);">${depAmt}</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <button type="button" class="btn" id="btnApproveWallet">Approve Down Payment</button>
+                  <button type="button" class="btn-secondary" id="btnDeclineWallet">Simulate Declined Payment</button>
+                  <button type="button" class="btn-ghost" id="btnCancelWallet">Cancel</button>
+                </div>
+              </div>
+            `;
 
-          const gName = (modal.querySelector('#bmGuestName')?.value || '').trim();
-          const phone = (modal.querySelector('#bmPhone')?.value || '').trim();
-          const email = (modal.querySelector('#bmEmail')?.value || '').trim();
-          const method = modal.querySelector('#bmPaymentMethod')?.value || (isStaffWalkIn ? 'Cash' : 'Credit card');
-          const notes = (modal.querySelector('#bmNotes')?.value || '').trim();
-          const idType = isStaffWalkIn ? (modal.querySelector('#bmIdType')?.value || '') : '';
-          const idNumber = isStaffWalkIn ? (modal.querySelector('#bmIdNumber')?.value || '').trim() : '';
-          const checkInNow = isStaffWalkIn ? !!modal.querySelector('#bmCheckInNow')?.checked : false;
-          const assignedRoom = isStaffWalkIn
-            ? Number(modal.querySelector('#bmRoomAssignment')?.value || computeState().availableRooms[0] || 0)
-            : computeState().availableRooms[0];
+            showModal(`${brand} Authorization`, sheetHtml, '', {
+              maxWidth: '420px',
+              onOpen(subModal) {
+                const approveBtn = subModal.querySelector('#btnApproveWallet');
+                const declineBtn = subModal.querySelector('#btnDeclineWallet');
+                const cancelBtn = subModal.querySelector('#btnCancelWallet');
 
-          if (gName.length < 2) {
-            toast('Please enter the primary guest full name', 'warn');
-            modal.querySelector('#bmGuestName')?.focus();
-            return;
-          }
-          if (typeof isValidPhMobile === 'function' && !isValidPhMobile(phone)) {
-            toast('Please provide a valid Philippine mobile number (e.g. +63 917 123 4567 or 09171234567)', 'warn');
-            modal.querySelector('#bmPhone')?.focus();
-            return;
-          }
-          if (!isStaffWalkIn && (!email || (typeof isValidEmail === 'function' && !isValidEmail(email)))) {
-            toast('Please enter a valid email address for reservation confirmation and receipt delivery', 'warn');
-            modal.querySelector('#bmEmail')?.focus();
-            return;
-          }
-          if (isStaffWalkIn && (!idType || !idNumber)) {
-            toast('Valid government-issued photo ID Type and ID Number are required for walk-in desk registration', 'warn');
-            modal.querySelector('#bmIdNumber')?.focus();
-            return;
-          }
+                if (approveBtn) {
+                  approveBtn.onclick = () => {
+                    closeModal();
+                    const res = PUPSJ_Services.PaymentService.pay(activeHold.holdId, paymentMethod, {
+                      phone: guestPhone,
+                      outcome: 'paid',
+                      ref
+                    });
+                    if (res.ok || res.success) {
+                      cleanupTimers();
+                      confirmedReservation = res.data || res.reservation;
+                      currentStep = 5;
+                      render();
+                    } else {
+                      attemptsMade = res.attempts;
+                      inlinePayError = res.error || 'Payment failed';
+                      render();
+                    }
+                  };
+                }
 
-          const state = computeState();
-          if (!state.canBook) {
-            toast('Selected room type is unavailable for your dates or exceeds capacity.', 'bad');
-            return;
-          }
+                if (declineBtn) {
+                  declineBtn.onclick = () => {
+                    closeModal();
+                    const res = PUPSJ_Services.PaymentService.pay(activeHold.holdId, paymentMethod, {
+                      phone: guestPhone,
+                      outcome: 'declined',
+                      ref
+                    });
+                    attemptsMade = res.attempts;
+                    inlinePayError = res.error || 'Payment declined by e-wallet provider';
+                    render();
+                  };
+                }
 
-          if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Securing Reservation…';
-          }
+                if (cancelBtn) {
+                  cancelBtn.onclick = () => closeModal();
+                }
+              }
+            });
+          };
+        }
 
-          try {
-            const newRes = Data.createReservation({
-              g: gName,
-              t: selectedType.n,
-              n: assignedRoom,
-              i: ci,
-              o: co,
-              gu: guests,
-              ph: phone,
-              email: email,
-              m: method,
-              note: notes,
-              rt: selectedType.r,
-              promo: activePromo,
-              source: isStaffWalkIn ? 'Walk-in' : 'Online',
-              createdBy: isStaffWalkIn ? { id: staffSession.id, name: staffSession.name, role: staffSession.role } : null,
-              idType,
-              idNumber,
-              checkInNow,
-              initialPayment: (isStaffWalkIn || (method === 'Credit Card' || method === 'Debit Card' || method === 'GCash' || method === 'Maya')) ? {
-                amount: state.depDue,
-                method: method,
-                kind: 'Deposit',
-                note: isStaffWalkIn ? 'Walk-in desk guarantee settlement' : '50% guarantee deposit on booking',
-                auth: 'AUTH-' + Math.floor(100000 + Math.random() * 900000),
-                ref: 'DEP-' + Date.now().toString().slice(-6)
-              } : null
+        // 3. Bank Transfer Simulated Gateway Sheet
+        const bankSelect = container.querySelector('#bankSelect');
+        if (bankSelect) {
+          bankSelect.onchange = () => {
+            selectedBank = bankSelect.value;
+          };
+        }
+
+        const launchBankBtn = container.querySelector('#btnLaunchBankSheet');
+        if (launchBankBtn) {
+          launchBankBtn.onclick = () => {
+            // Initiates hold extension to bankHoldMinutes and creates AwaitingBank intent
+            const initRes = PUPSJ_Services.PaymentService.pay(activeHold.holdId, 'bank', {
+              bankName: selectedBank
             });
 
-            if (activePromo) {
-              Data.incrementPromo(activePromo.code);
+            const intent = initRes?.intent || initRes?.data;
+            if (!initRes || (!initRes.success && !initRes.ok) || !intent) {
+              toast(initRes?.error || 'Unable to open bank transfer gateway', 'bad');
+              return;
             }
 
-            if (!isStaffWalkIn) {
-              Data.setGuestSession({
-                name: gName,
-                email: email,
-                phone: phone,
-                code: newRes.c
-              });
+            activeIntent = intent;
+
+            // Start polling PaymentIntent status every 2s
+            if (!pollInterval) {
+              pollInterval = setInterval(() => {
+                if (!activeIntent) return;
+                const freshIntent = PUPSJ_Services.PaymentService.getIntent(activeIntent.intentId);
+                if (freshIntent && freshIntent.status === 'Succeeded') {
+                  cleanupTimers();
+                  const allRes = Data.getReservations();
+                  const targetRes = allRes.find(r => r.holdId === activeHold.holdId) || (typeof Data.findRes === 'function' ? Data.findRes(freshIntent.holdId) : null);
+                  confirmedReservation = targetRes || allRes[0];
+                  currentStep = 5;
+                  render();
+                }
+              }, 2000);
             }
 
-            closeModal();
+            const depAmt = peso(quote.depositDue);
+            const refCode = `PUP-${activeHold.holdId}`;
 
-            // Confirmation Modal (Carries slot line 427!)
-            showModal(
-              `Booking Confirmed &mdash; ${newRes.c}`,
-              `
-              <div style="text-align: center; padding: 12px 0;">
-                <span class="pill pill--ok" style="font-size: 13px; padding: 4px 12px;">${isStaffWalkIn ? 'Walk-In Booking Confirmed' : 'Guaranteed Booking'}</span>
-                <h2 style="margin: 12px 0 4px; font-size: 32px; font-family: 'Cormorant Garamond', serif;">${newRes.c}</h2>
-                <p class="text-secondary" style="font-size: 14px;">${isStaffWalkIn ? 'Walk-in guest' : 'Thank you,'} <b>${esc(gName)}</b>. Room reservation secured.</p>
+            const bankSheetHtml = `
+              <div style="text-align: center; padding: 10px 0;">
+                <h3 style="margin: 0 0 4px; font-size: 20px;">${esc(selectedBank)} Gateway</h3>
+                <p class="text-secondary text-sm" style="margin: 0 0 14px;">
+                  Simulated Online Banking / QR Ph Webhook Simulator
+                </p>
 
-                <div class="card card-sm" style="margin: 16px 0; text-align: left; background-color: var(--surface-2); font-size: 13px; border: 1px solid var(--line);">
-                  <div><b>Room Category:</b> ${esc(selectedType.n)} (Room ${assignedRoom})</div>
-                  <div><b>Stay Period:</b> ${fmtDate(ci)} – ${fmtDate(co)} (${state.nights} nights)</div>
-                  <div><b>Registered Guests:</b> ${guests} guest${guests > 1 ? 's' : ''}</div>
-                  <div><b>Status:</b> <span class="pill ${newRes.st === 'Checked-in' ? 'pill--ok' : 'pill--info'}">${newRes.st}</span></div>
-                  <div><b>Deposit Settled:</b> ${peso(state.depDue)} via ${esc(method)}</div>
-                  <div style="color: var(--bad); font-weight: 600;"><b>Balance Due:</b> ${peso(state.balDue)} at Front Desk check-in</div>
+                <div style="background: #fff; color: #111; padding: 14px; border-radius: 8px; border: 1px solid var(--line); display: inline-block; margin-bottom: 14px;">
+                  <div style="font-size: 11px; margin-bottom: 4px; font-weight: 600; color: #333;">[PLACEHOLDER: Phone Device Icon - Insert mobile QR scanner graphic here]</div>
+                  <div style="font-family: monospace; font-size: 11px; font-weight: 700;">[IMAGE: QR Ph code, 1:1]</div>
+                  <div style="font-size: 12px; margin-top: 4px;">Ref: <b>${refCode}</b> &middot; <b>${depAmt}</b></div>
                 </div>
 
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                  ${isStaffWalkIn ? `
-                    <a href="../management/reservations.html?code=${newRes.c}" class="btn">
-                      View in Reservations &rarr;
-                    </a>
-                  ` : `
-                    <a href="../guest/guest-portal.html?code=${newRes.c}" class="btn">
-                      Open Guest Portal &rarr;
-                    </a>
-                  `}
-                  <button class="btn-secondary" onclick="printTaxInvoice('${newRes.c}')">
-                    <span class="ic" data-icon="print">[ICON: print]</span> Print Tax Invoice
+                <div id="bankSheetStatus" class="text-sm" style="margin-bottom: 14px; min-height: 20px; color: var(--gold-ink); font-weight: 600;">
+                  Awaiting your online banking action…
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <button type="button" class="btn" id="btnApproveBankCallback">
+                    Approve Payment (2-4s Webhook Callback)
+                  </button>
+                  <button type="button" class="btn-secondary" id="btnDeclineBankCallback">
+                    Decline Payment
+                  </button>
+                  <button type="button" class="btn-ghost" id="btnCloseBankSheet">
+                    Close Sheet (Keep Waiting)
                   </button>
                 </div>
               </div>
-              `,
-              '',
-              { maxWidth: '520px' }
-            );
+            `;
 
-            if (typeof onComplete === 'function') {
-              try { onComplete(newRes); } catch (err) {}
-            }
-          } catch (createErr) {
-            toast(createErr.message || 'Failed to complete reservation', 'bad');
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = `Confirm Booking (${peso(state.depDue)})`;
-            }
-          }
-        };
-      }
+            showModal('Bank Gateway Simulator', bankSheetHtml, '', {
+              maxWidth: '440px',
+              onOpen(bModal) {
+                const approveBtn = bModal.querySelector('#btnApproveBankCallback');
+                const declineBtn = bModal.querySelector('#btnDeclineBankCallback');
+                const closeBtn = bModal.querySelector('#btnCloseBankSheet');
+                const statusDiv = bModal.querySelector('#bankSheetStatus');
+
+                if (approveBtn) {
+                  approveBtn.onclick = () => {
+                    approveBtn.disabled = true;
+                    if (statusDiv) statusDiv.innerHTML = 'Simulating secure bank gateway confirmation callback (2.5s)…';
+
+                    setTimeout(() => {
+                      const callbackRes = PUPSJ_Services.PaymentService.bankCallback(
+                        activeIntent.intentId,
+                        'paid',
+                        'BNK-REF-' + Date.now()
+                      );
+                      closeModal();
+                      if (callbackRes.success) {
+                        cleanupTimers();
+                        confirmedReservation = callbackRes.reservation;
+                        currentStep = 5;
+                        render();
+                      } else {
+                        inlinePayError = callbackRes.error || 'Bank confirmation failed';
+                        render();
+                      }
+                    }, 2500);
+                  };
+                }
+
+                if (declineBtn) {
+                  declineBtn.onclick = () => {
+                    PUPSJ_Services.PaymentService.bankCallback(activeIntent.intentId, 'declined');
+                    closeModal();
+                    attemptsMade += 1;
+                    inlinePayError = 'Bank transfer declined by provider';
+                    render();
+                  };
+                }
+
+                if (closeBtn) closeBtn.onclick = () => closeModal();
+              }
+            });
+          };
+        }
+      };
+
+      const renderHoldExpired = (container) => {
+        cleanupTimers();
+        container.innerHTML = `
+          ${renderStepsNav()}
+          <div style="text-align: center; padding: 24px 0;">
+            <div style="font-size: 13px; font-weight: 600; color: var(--warn); margin-bottom: 8px;">[PLACEHOLDER: Timer Expired Icon - Insert hold timeout hourglass / clock SVG here]</div>
+            <h3 style="font-size: 22px; font-family: 'Cormorant Garamond', serif; margin: 0 0 6px;">Room Inventory Hold Expired</h3>
+            <p class="text-secondary text-sm" style="max-width: 440px; margin: 0 auto 18px;">
+              The temporary reservation hold has timed out to allow other guests access to room inventory. Your search criteria has been safely preserved.
+            </p>
+            <button type="button" class="btn" id="btnCheckAvailAgain">
+              Check Availability Again &rarr;
+            </button>
+          </div>
+        `;
+
+        const btnAgain = container.querySelector('#btnCheckAvailAgain');
+        if (btnAgain) {
+          btnAgain.onclick = () => {
+            activeHold = null;
+            activeIntent = null;
+            inlinePayError = '';
+            currentStep = 1;
+            render();
+          };
+        }
+      };
+
+      // ─────────────────────────────────────────────────────────────
+      // STEP 5: CONFIRMED (Instant Confirmation, Voucher, OR, Email)
+      // ─────────────────────────────────────────────────────────────
+      const renderStep5 = (container) => {
+        cleanupTimers();
+        const r = confirmedReservation || (typeof Data !== 'undefined' ? Data.getReservations()[0] : null);
+        if (!r) {
+          container.innerHTML = '<p class="text-secondary">Reservation confirmed.</p>';
+          return;
+        }
+
+        const quote = r.quoteSnapshot || getQuote();
+        const orNumber = (r.payments && r.payments[0] && r.payments[0].or) ? r.payments[0].or : ('OR-' + r.c.replace(/\D/g, ''));
+        const nts = typeof Data !== 'undefined' && Data.nts ? Data.nts(r) : quote.nights;
+
+        container.innerHTML = `
+          ${renderStepsNav()}
+
+          <div style="text-align: center; padding: 6px 0 14px;">
+            <span class="pill pill--ok" style="font-size: 13px; padding: 4px 14px;">Instant Online Booking Confirmed</span>
+            <h2 style="margin: 10px 0 2px; font-size: 34px; font-family: 'Cormorant Garamond', serif;">${r.c}</h2>
+            <p class="text-secondary" style="font-size: 14px; margin: 0;">
+              Thank you, <b>${esc(r.g)}</b>! Your room reservation is guaranteed.
+            </p>
+          </div>
+
+          <div class="card card-sm" style="margin: 0 0 16px; text-align: left; background-color: var(--surface-2); font-size: 13px; border: 1px solid var(--line);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div><b>Room Category:</b> ${esc(r.t)} ${r.n ? `(Room ${r.n})` : '(Assigned at Check-in)'}</div>
+              <div><b>Stay Period:</b> ${fmtDate(r.i)} – ${fmtDate(r.o)} (${nts} nights)</div>
+              <div><b>Registered Guests:</b> ${r.gu} guest${r.gu > 1 ? 's' : ''}</div>
+              <div><b>Status:</b> <span class="pill pill--ok">${r.st}</span></div>
+              <div><b>Total Tariff:</b> ${peso(quote.total)}</div>
+              <div><b>Deposit Settled:</b> <span style="color: var(--ok); font-weight: 600;">${peso(r.depositPaid || quote.depositDue)} (${r.depositPct || CONFIG.depositPct}% down payment)</span></div>
+              <div><b>Official Receipt:</b> <b style="font-family: monospace;">${orNumber}</b></div>
+              <div><b>Balance Due:</b> <span style="color: var(--bad); font-weight: 600;">${peso(r.balanceDue || quote.balanceDue)} at check-in</span></div>
+            </div>
+            <div style="border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; font-size: 11px; color: var(--ink-3);">
+              Confirmed by <b>${esc(r.confirmedBy || 'System (payment)')}</b> &middot; Free cancellation up to ${CONFIG.freeCancelDays || 3} days before arrival.
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <a href="../guest/guest-portal.html?code=${r.c}&tab=reservations" class="btn">
+              View in My Reservations &rarr;
+            </a>
+            <button type="button" class="btn-secondary" id="btnBmPrintVoucher">
+              <span class="ic" data-icon="print">[ICON: print]</span> Print Voucher
+            </button>
+            <button type="button" class="btn-ghost" id="btnBmSimEmail">
+              Simulated Email Preview
+            </button>
+          </div>
+        `;
+
+        const printBtn = container.querySelector('#btnBmPrintVoucher');
+        const emailBtn = container.querySelector('#btnBmSimEmail');
+
+        if (printBtn) {
+          printBtn.onclick = () => openVoucherModal(r.c);
+        }
+        if (emailBtn) {
+          emailBtn.onclick = () => openSimulatedEmailModal(r.c);
+        }
+
+        if (typeof onComplete === 'function') {
+          try { onComplete(r); } catch (e) {}
+        }
+      };
+
+      // Initial Render
+      render();
     }
   });
+}
+
+// ─── Voucher Modal with [PLACEHOLDER: Watermark SIMULATED] ───
+function openVoucherModal(resCode) {
+  const r = typeof Data !== 'undefined' && Data.findRes ? Data.findRes(resCode) : null;
+  if (!r) {
+    toast('Reservation not found', 'bad');
+    return;
+  }
+  const nts = typeof Data !== 'undefined' && Data.nts ? Data.nts(r) : 1;
+  const quote = r.quoteSnapshot || { total: Data.tot(r), depositDue: r.depositPaid, balanceDue: r.balanceDue };
+  const orNumber = (r.payments && r.payments[0] && r.payments[0].or) ? r.payments[0].or : ('OR-' + r.c.replace(/\D/g, ''));
+
+  const voucherHtml = `
+    <div style="position: relative; padding: 16px; font-family: 'Plus Jakarta Sans', sans-serif; background: #fff; color: #111; border: 1px solid #ddd; border-radius: 8px;">
+      <!-- Simulated Watermark Overlay -->
+      <div style="position: absolute; top: 38%; left: 18%; transform: rotate(-25deg); font-size: 38px; font-weight: 800; color: rgba(184, 137, 26, 0.15); pointer-events: none; border: 4px dashed rgba(184, 137, 26, 0.2); padding: 8px 24px; text-transform: uppercase;">
+        [PLACEHOLDER: Watermark SIMULATED]
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--gold); padding-bottom: 12px; margin-bottom: 14px;">
+        <div>
+          <h2 style="margin: 0; font-size: 20px; color: var(--gold-ink); font-family: 'Cormorant Garamond', serif;">${CONFIG.hotelName}</h2>
+          <div style="font-size: 11px; color: #555;">Official Online Reservation Voucher</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 15px; font-weight: 700; color: var(--ok);">GUARANTEED</div>
+          <div style="font-size: 12px; font-weight: 600;">Code: ${r.c}</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; margin-bottom: 14px;">
+        <div><b>Guest Name:</b> ${esc(r.g)}</div>
+        <div><b>Contact Phone:</b> ${esc(r.ph || 'On file')}</div>
+        <div><b>Room Category:</b> ${esc(r.t)} (Room ${r.n || 'TBD'})</div>
+        <div><b>Stay Duration:</b> ${fmtDate(r.i)} – ${fmtDate(r.o)} (${nts} nights)</div>
+        <div><b>Registered Guests:</b> ${r.gu} guest(s)</div>
+        <div><b>Deposit Receipt:</b> ${orNumber}</div>
+      </div>
+
+      <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 10px; font-size: 12px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between;"><span>Total Accommodation Tariff:</span><b>${peso(quote.total)}</b></div>
+        <div style="display: flex; justify-content: space-between; color: var(--ok);"><span>Deposit Settled (${r.depositPct || CONFIG.depositPct}%):</span><b>&minus; ${peso(r.depositPaid || quote.depositDue)}</b></div>
+        <div style="display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 4px; margin-top: 4px; font-weight: 700; color: var(--bad);">
+          <span>Balance Due at Check-in:</span><span>${peso(r.balanceDue || quote.balanceDue)}</span>
+        </div>
+      </div>
+
+      <div style="font-size: 11px; color: #666; border-top: 1px solid #eee; padding-top: 8px;">
+        <b>Cancellation Policy:</b> Free cancellation up to ${CONFIG.freeCancelDays || 3} days before arrival. Cancellations less than ${CONFIG.freeCancelDays || 3} days before arrival are refunded less a ${CONFIG.lateCancelFeePct || 30}% deduction. No-shows are not refunded.
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;" class="no-print">
+        <button type="button" class="btn-secondary" onclick="closeModal()">Close</button>
+        <button type="button" class="btn" onclick="window.print()"><span class="ic" data-icon="print">[ICON: print]</span> Print Voucher</button>
+      </div>
+    </div>
+  `;
+
+  showModal(`Reservation Voucher &mdash; ${r.c}`, voucherHtml, '', { maxWidth: '540px' });
+}
+
+// ─── Simulated Confirmation Email Preview ───
+function openSimulatedEmailModal(resCode) {
+  const r = typeof Data !== 'undefined' && Data.findRes ? Data.findRes(resCode) : null;
+  if (!r) return;
+  const quote = r.quoteSnapshot || { total: Data.tot(r), depositDue: r.depositPaid, balanceDue: r.balanceDue };
+
+  const emailHtml = `
+    <div style="background: var(--surface); padding: 14px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px;">
+      <div style="border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 12px; font-size: 12px;">
+        <div><b>From:</b> PUPSJ Hotel Reservations &lt;reservations@pupsjhotel.com&gt;</div>
+        <div><b>To:</b> ${esc(r.email || r.g + '@guest.com')}</div>
+        <div><b>Date:</b> ${new Date().toLocaleString()}</div>
+        <div><b>Subject:</b> Booking Confirmed: Your Stay at PUPSJ Hotel (${r.c})</div>
+      </div>
+
+      <p>Dear ${esc(r.g)},</p>
+      <p>Thank you for choosing ${CONFIG.hotelName}. Your reservation is officially confirmed upon receipt of your 50% deposit payment.</p>
+      
+      <div style="background: var(--surface-2); padding: 12px; border-radius: var(--r); margin: 12px 0;">
+        <div><b>Confirmation Code:</b> ${r.c}</div>
+        <div><b>Room Category:</b> ${esc(r.t)}</div>
+        <div><b>Arrival:</b> ${fmtDate(r.i)} from 2:00 PM</div>
+        <div><b>Departure:</b> ${fmtDate(r.o)} until 12:00 PM</div>
+        <div><b>Deposit Paid:</b> ${peso(r.depositPaid || quote.depositDue)} (${r.depositPct || CONFIG.depositPct}%)</div>
+        <div><b>Balance Due at Check-in:</b> ${peso(r.balanceDue || quote.balanceDue)}</div>
+      </div>
+
+      <p class="text-xs text-secondary">
+        Cancellation Policy: Free cancellation up to ${CONFIG.freeCancelDays || 3} days before arrival. Cancellations less than ${CONFIG.freeCancelDays || 3} days before arrival are refunded less a ${CONFIG.lateCancelFeePct || 30}% deduction.
+      </p>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
+        <button type="button" class="btn-secondary" onclick="closeModal()">Close Email</button>
+      </div>
+    </div>
+  `;
+
+  showModal('Simulated Email Preview', emailHtml, '', { maxWidth: '520px' });
 }
 
 // ─── Intent Auto-Resume on Page Ready ───
 if (typeof window !== 'undefined') {
   window.showAuthGateModal = showAuthGateModal;
   window.openBookingModal = openBookingModal;
+  window.openVoucherModal = openVoucherModal;
+  window.openSimulatedEmailModal = openSimulatedEmailModal;
 
   window.addEventListener('DOMContentLoaded', () => {
     try {
@@ -638,6 +1433,7 @@ if (typeof window !== 'undefined') {
     } catch (e) {}
   });
 }
+
 
 // ─── 2. Global Folio & Ledger Modal ───
 function openFolioModal(resCode, onUpdate = null) {
@@ -901,8 +1697,7 @@ function openReservationDetail(code, onUpdate = null) {
   const total = Data.tot(r);
   const paid = Data.paidAmt(r);
   const bal = Data.balOf(r);
-  const isClean = Data.isRoomClean(r.n);
-  const canCheckIn = r.st === 'Confirmed' && isClean && (paid >= Data.depAmt(r));
+  const canCheckIn = r.st === 'Confirmed' && isClean && (paid >= (r.depositRequired != null ? r.depositRequired : Data.depAmt(r)));
   const canCheckOut = r.st === 'Checked-in';
 
   const bodyHtml = `
@@ -1056,10 +1851,10 @@ function openReservationDetail(code, onUpdate = null) {
   if (btnCancel) {
     btnCancel.onclick = () => {
       const diff = dateDiff(today(), r.i);
-      const isFree = diff >= CONFIG.freeCancelDays;
+      const isFree = diff >= (CONFIG.freeCancelDays || 3);
       const policyNotice = isFree
-        ? 'Full deposit refund will be issued under 3-day policy.'
-        : `1st-night fee (${peso(r.rt || 3200)}) will be retained under policy.`;
+        ? `Full deposit refund will be issued under ${CONFIG.freeCancelDays || 3}-day policy.`
+        : `${CONFIG.lateCancelFeePct || 30}% late cancellation deduction will apply under policy.`;
 
       const confirmBody = `
         <p>Are you sure you want to cancel reservation <b>${esc(r.c)}</b> (${esc(r.g)})?</p>

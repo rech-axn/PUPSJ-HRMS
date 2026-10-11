@@ -11,11 +11,11 @@
   let timerInterval = null;
 
   function init() {
+    if (typeof window !== 'undefined' && window.location) {
+      window.location.replace('orders.html');
+      return;
+    }
     renderApp();
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      updateOrderTimers();
-    }, 30000);
   }
 
   function getActiveKitchenOrders() {
@@ -64,7 +64,7 @@
     app.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
         <div>
-          <span class="site-section-tag">RESTAURANT &amp; BAR</span>
+          <span class="site-section-tag">RESTAURANT</span>
           <h1 style="font-size: 28px; margin: 4px 0 0 0;">Kitchen Display System (KDS)</h1>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">

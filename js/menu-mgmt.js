@@ -29,7 +29,7 @@
     app.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
         <div>
-          <span class="site-section-tag">RESTAURANT &amp; BAR</span>
+          <span class="site-section-tag">RESTAURANT</span>
           <h1 style="font-size: 28px; margin: 4px 0 0 0;">Culinary Menu Catalog</h1>
         </div>
         <div style="display: flex; gap: 8px;">
@@ -262,7 +262,6 @@
             <label>Prep Station</label>
             <select id="newDishStation">
               <option value="Kitchen">Kitchen</option>
-              <option value="Bar">Bar</option>
             </select>
           </div>
           <div class="field">
@@ -347,8 +346,7 @@
           <div class="field">
             <label>Prep Station</label>
             <select id="editDishStation">
-              <option value="Kitchen" ${item.station === 'Kitchen' ? 'selected' : ''}>Kitchen</option>
-              <option value="Bar" ${item.station === 'Bar' ? 'selected' : ''}>Bar</option>
+              <option value="Kitchen" selected>Kitchen</option>
             </select>
           </div>
           <div class="field">

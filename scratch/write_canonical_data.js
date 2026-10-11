@@ -92,7 +92,7 @@ const generateSeeds = () => {
     { id: 5, name: 'Pedro Cruz', email: 'pedro@pupsj.edu.ph', password: 'housekeeping123', role: 'Housekeeping', shift: 'Day', phone: '+63 917 100 0005', active: true, created: '2026-03-10' },
     { id: 6, name: 'Ana Bautista', email: 'ana@pupsj.edu.ph', password: 'housekeeping123', role: 'Housekeeping', shift: 'Night', phone: '+63 917 100 0006', active: true, created: '2026-04-05' },
     { id: 7, name: 'Carlo Navarro', email: 'carlo@pupsj.edu.ph', password: 'maintenance123', role: 'Maintenance', shift: 'Day', phone: '+63 917 100 0007', active: true, created: '2026-05-20' },
-    { id: 8, name: 'Chef Marco Valdez', email: 'kitchen@pupsj.edu.ph', password: 'kitchen123', role: 'Kitchen', shift: 'Day', phone: '+63 917 100 0009', active: true, created: '2026-06-01' },
+    { id: 8, name: 'Rechelle Cansila', email: 'restaurant@pupsj.edu.ph', password: 'restaurant123', role: 'restaurant_receptionist', shift: 'Day', phone: '+63 917 100 0009', active: true, created: '2026-06-01' },
     { id: 9, name: 'Ben Aquino', email: 'ben@pupsj.edu.ph', password: 'security123', role: 'Security', shift: 'Night', phone: '+63 917 100 0008', active: true, created: '2026-06-01' }
   ];
 
@@ -351,10 +351,10 @@ const generateSeeds = () => {
     { id: 'MNU-402', name: 'Mango Tres Leches Cake', category: 'Desserts', desc: 'Sponge cake soaked in three milks, layered with sweet Carabao mango coulis.', price: 260, available: true, station: 'Kitchen', tags: ['Dessert', 'Sweet'] },
     { id: 'MNU-403', name: 'Warm Batangas Tablea Fondant', category: 'Desserts', desc: 'Molten dark chocolate cake crafted from native cacao tablea with vanilla bean cream.', price: 310, available: true, station: 'Kitchen', tags: ['Dessert', 'Chocolate'] },
 
-    { id: 'MNU-501', name: 'Fresh Ripe Mango Shake', category: 'Drinks', desc: 'Chilled ripe Philippine mango blended with organic milk.', price: 180, available: true, station: 'Bar', tags: ['Drink', 'Fresh'] },
-    { id: 'MNU-502', name: 'Calamansi Honey Cooler', category: 'Drinks', desc: 'Freshly pressed local citrus with raw wild honey and fresh mint leaves.', price: 160, available: true, station: 'Bar', tags: ['Drink', 'Non-Alcoholic'] },
-    { id: 'MNU-503', name: 'Barista Latte / Cappuccino', category: 'Drinks', desc: 'Locally sourced single-origin Arabica espresso with steamed whole milk.', price: 170, available: true, station: 'Bar', tags: ['Drink', 'Coffee'] },
-    { id: 'MNU-504', name: 'Signature Sangria (Glass)', category: 'Drinks', desc: 'House red wine infused with fresh citrus, berries, and a touch of brandy.', price: 340, available: true, station: 'Bar', tags: ['Drink', 'Wine'] }
+    { id: 'MNU-501', name: 'Fresh Ripe Mango Shake', category: 'Drinks', desc: 'Chilled ripe Philippine mango blended with organic milk.', price: 180, available: true, station: 'Kitchen', tags: ['Drink', 'Fresh'] },
+    { id: 'MNU-502', name: 'Calamansi Honey Cooler', category: 'Drinks', desc: 'Freshly pressed local citrus with raw wild honey and fresh mint leaves.', price: 160, available: true, station: 'Kitchen', tags: ['Drink', 'Non-Alcoholic'] },
+    { id: 'MNU-503', name: 'Barista Latte / Cappuccino', category: 'Drinks', desc: 'Locally sourced single-origin Arabica espresso with steamed whole milk.', price: 170, available: true, station: 'Kitchen', tags: ['Drink', 'Coffee'] },
+    { id: 'MNU-504', name: 'Lemongrass Ginger Iced Tea', category: 'Drinks', desc: 'Fresh brewed native lemongrass and ginger infused with pandan and raw honey.', price: 160, available: true, station: 'Kitchen', tags: ['Drink', 'Fresh'] }
   ];
 
   // Restaurant Tables (num as Number, status, area)
@@ -384,7 +384,7 @@ const generateSeeds = () => {
       tableId: 'TBL-3',
       status: 'Confirmed',
       notes: 'Window seating preferred',
-      created: `${T} 10:00`
+      created: `${ T } 10:00`
     },
     {
       code: 'TBL-102',
@@ -400,7 +400,7 @@ const generateSeeds = () => {
       tableId: '',
       status: 'Pending',
       notes: 'Birthday celebration',
-      created: `${T} 11:30`
+      created: `${ T } 11: 30`
     }
   ];
 
@@ -422,8 +422,8 @@ const generateSeeds = () => {
       status: 'Served',
       payStatus: 'Room folio',
       paymentKind: 'Room Folio',
-      created: `${T} 12:15`,
-      updated: `${T} 12:45`
+      created: `${ T } 12: 15`,
+      updated: `${ T } 12: 45`
     },
     {
       code: 'ORD-1002',
@@ -442,8 +442,8 @@ const generateSeeds = () => {
       status: 'Preparing',
       payStatus: 'Unpaid',
       paymentKind: 'Pending Settlement',
-      created: `${T} 13:00`,
-      updated: `${T} 13:05`
+      created: `${ T } 13:00`,
+      updated: `${ T } 13:05`
     },
     {
       code: 'ORD-1003',
@@ -461,8 +461,8 @@ const generateSeeds = () => {
       status: 'New',
       payStatus: 'Unpaid',
       paymentKind: 'Pending Settlement',
-      created: `${T} 13:10`,
-      updated: `${T} 13:10`
+      created: `${ T } 13: 10`,
+      updated: `${ T } 13: 10`
     }
   ];
 
@@ -478,11 +478,11 @@ const generateSeeds = () => {
       status: 'Open',
       unreadStaff: 1,
       unreadGuest: 0,
-      updated: `${T} 11:20`,
-      updatedAt: `${T} 11:20`,
+      updated: `${ T } 11: 20`,
+      updatedAt: `${ T } 11: 20`,
       messages: [
-        { sender: 'Liam Carter', role: 'guest', time: `${T} 11:15`, text: 'Hello, could we get two extra hypoallergenic pillows brought up to Room 305?' },
-        { sender: 'Maria Santos', role: 'staff', time: `${T} 11:20`, text: 'Good morning Mr. Carter, housekeeping has been notified and will deliver them shortly.' }
+        { sender: 'Liam Carter', role: 'guest', time: `${ T } 11: 15`, text: 'Hello, could we get two extra hypoallergenic pillows brought up to Room 305?' },
+        { sender: 'Maria Santos', role: 'staff', time: `${ T } 11: 20`, text: 'Good morning Mr. Carter, housekeeping has been notified and will deliver them shortly.' }
       ]
     },
     {
@@ -495,10 +495,10 @@ const generateSeeds = () => {
       status: 'Open',
       unreadStaff: 1,
       unreadGuest: 0,
-      updated: `${T} 09:40`,
-      updatedAt: `${T} 09:40`,
+      updated: `${ T } 09: 40`,
+      updatedAt: `${ T } 09: 40`,
       messages: [
-        { sender: 'Eduardo Ramos', role: 'guest', time: `${T} 09:40`, text: 'Good day. We would like to inquire if the Terrace area can host 12 guests for a private family dinner next Friday.' }
+        { sender: 'Eduardo Ramos', role: 'guest', time: `${ T } 09: 40`, text: 'Good day. We would like to inquire if the Terrace area can host 12 guests for a private family dinner next Friday.' }
       ]
     }
   ];
@@ -518,7 +518,7 @@ const generateSeeds = () => {
       notes: '',
       assignedTo: 'Ruben Herwitz',
       assigned: 'Ruben Herwitz',
-      created: `${T} 10:30`
+      created: `${ T } 10: 30`
     },
     {
       ref: 'INQ-1002',
@@ -550,8 +550,8 @@ const generateSeeds = () => {
       st: 'In progress',
       assignedTo: 'Liza Gomez',
       assigned: 'Liza Gomez',
-      created: `${T} 11:15`,
-      updated: `${T} 11:20`
+      created: `${ T } 11: 15`,
+      updated: `${ T } 11: 20`
     }
   ];
 
@@ -570,7 +570,7 @@ const generateSeeds = () => {
       outOfService: true,
       oos: true,
       notes: 'Scheduled for adjustment today',
-      created: `${T} 08:30`,
+      created: `${ T } 08: 30`,
       resolved: ''
     }
   ];
@@ -652,9 +652,9 @@ const generateSeeds = () => {
 
   // Audit Trail
   const audit = [
-    { id: 1, time: `${T} 08:30`, user: 'Carlo Navarro', action: 'Created maintenance request', recordType: 'Maintenance', type: 'Maintenance', recordId: 'MNT-101', idVal: 'MNT-101', details: 'Room 501 door latch' },
-    { id: 2, time: `${T} 11:20`, user: 'Maria Santos', action: 'Assigned housekeeping request', recordType: 'Housekeeping', type: 'Housekeeping', recordId: 'HKR-101', idVal: 'HKR-101', details: 'Room 305 extra pillows' },
-    { id: 3, time: `${T} 12:45`, user: 'Chef Marco Valdez', action: 'Updated restaurant order', recordType: 'Order', type: 'Order', recordId: 'ORD-1001', idVal: 'ORD-1001', details: 'Billed to Room 305 folio' }
+    { id: 1, time: `${ T } 08: 30`, user: 'Carlo Navarro', action: 'Created maintenance request', recordType: 'Maintenance', type: 'Maintenance', recordId: 'MNT-101', idVal: 'MNT-101', details: 'Room 501 door latch' },
+    { id: 2, time: `${ T } 11: 20`, user: 'Maria Santos', action: 'Assigned housekeeping request', recordType: 'Housekeeping', type: 'Housekeeping', recordId: 'HKR-101', idVal: 'HKR-101', details: 'Room 305 extra pillows' },
+    { id: 3, time: `${ T } 12: 45`, user: 'Rechelle Cansila', action: 'Updated restaurant order', recordType: 'Order', type: 'Order', recordId: 'ORD-1001', idVal: 'ORD-1001', details: 'Billed to Room 305 folio' }
   ];
 
   return {
@@ -802,8 +802,8 @@ const Data = {
     const raw = store.get('types', DEFAULT_TYPES);
     return raw.map(t => ({
       ...t,
-      desc: t.desc || t.description || `${t.n} accommodation with standard room comforts.`,
-      description: t.desc || t.description || `${t.n} accommodation with standard room comforts.`,
+      desc: t.desc || t.description || `${ t.n } accommodation with standard room comforts.`,
+      description: t.desc || t.description || `${ t.n } accommodation with standard room comforts.`,
       amenities: Array.isArray(t.amenities)
         ? t.amenities
         : String(t.amenities || '').split(',').map(s => s.trim()).filter(Boolean)
@@ -1124,7 +1124,7 @@ const Data = {
     res.unshift(newRes);
     this.saveReservations(res);
 
-    this.audit('Created reservation', 'Reservation', code, `${newRes.g} (${newRes.t})`);
+    this.audit('Created reservation', 'Reservation', code, `${ newRes.g } (${ newRes.t })`);
     return newRes;
   },
 

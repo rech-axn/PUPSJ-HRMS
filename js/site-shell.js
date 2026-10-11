@@ -35,7 +35,44 @@
 
     if (guestSession && guestSession.name) {
       // Guest is signed in
+      const guestNotifs = (typeof Data !== 'undefined' && Data.getGuestNotifications) ? Data.getGuestNotifications(guestSession) : [];
+      const guestSeenList = store.get('guestNotifSeenIds', []);
+      const guestSeenSet = new Set(Array.isArray(guestSeenList) ? guestSeenList : []);
+      const unseenGuestCount = guestNotifs.filter(n => !guestSeenSet.has(n.id)).length;
+
       authSectionHtml = `
+        <!-- Guest Notification Bell -->
+        <div class="staff-notif-wrap" id="publicNotifWrap" style="display: inline-block;">
+          <button class="staff-notif-btn" id="publicNotifBtn" type="button" aria-label="View guest notifications">
+            <span class="ic" data-icon="bell">[ICON: bell]</span>
+            ${unseenGuestCount > 0 ? `<span class="staff-notif-badge" id="publicNotifBadge">${unseenGuestCount}</span>` : ''}
+          </button>
+          <div class="staff-notif-dropdown" id="publicNotifDropdown" style="right: 0;">
+            <div class="staff-notif-header">
+              <b>Notifications (${guestNotifs.length})</b>
+              <button class="btn-ghost btn-sm" id="btnMarkGuestNotifsSeen" style="font-size: 11px;">Mark all seen</button>
+            </div>
+            <div class="staff-notif-list" id="publicNotifList">
+              ${guestNotifs.length ? guestNotifs.map(n => {
+                const isUnread = !guestSeenSet.has(n.id);
+                const targetUrl = n.url.startsWith('http') || n.url.includes('/') ? n.url : `${pagesPath}guest/${n.url}`;
+                return `
+                  <a href="${targetUrl}" class="staff-notif-item guest-notif-item" data-notif-id="${esc(n.id)}" style="${isUnread ? 'background: rgba(184, 137, 26, 0.05);' : ''}">
+                    <div style="display: flex; align-items: flex-start; gap: 8px;">
+                      ${isUnread ? '<span class="guest-notif-unread-dot" style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold-ink); margin-top: 5px; flex-shrink: 0;"></span>' : '<span style="display: inline-block; width: 7px; height: 7px; flex-shrink: 0;"></span>'}
+                      <div style="flex: 1;">
+                        <b style="${isUnread ? 'color: var(--ink);' : 'color: var(--ink-2);'}">${esc(n.title)}</b>
+                        <div style="font-size: 12px; color: var(--ink-2); margin-top: 2px;">${esc(n.desc)}</div>
+                        <div class="text-sm" style="color: var(--ink-3); margin-top: 2px;">${esc(n.time)}</div>
+                      </div>
+                    </div>
+                  </a>
+                `;
+              }).join('') : '<div style="padding: 16px; text-align: center; color: var(--ink-3); font-size: 13px;">No notifications</div>'}
+            </div>
+          </div>
+        </div>
+
         <div class="staff-user-menu" id="publicUserMenu">
           <button class="staff-user-btn" id="publicUserBtn" type="button" aria-haspopup="true" aria-expanded="false">
             <span class="ic" data-icon="user">[ICON: user]</span>
@@ -83,7 +120,7 @@
     } else {
       // Visitor
       authSectionHtml = `
-        <a class="btn-secondary btn-sm" href="${pagesPath}auth/guest-login.html">
+        <a class="btn-secondary btn-sm" href="${pagesPath}auth/login.html">
           <span class="ic" data-icon="user">[ICON: user]</span> Sign In
         </a>
       `;
@@ -98,7 +135,7 @@
     navEl.innerHTML = `
       <div class="site-nav-container">
         <a class="site-brand" href="${pagesPath}main/home.html">
-          <img src="${rootPath}assets/logo/pupsj-mark.png" alt="PUPSJ" style="width: 28px; height: 28px; border-radius: 4px; display: inline-block; object-fit: contain;">
+          <img src="${rootPath}assets/logo/pupsj-mark.png" alt="PUPSJ" style="width: 32px; height: 32px; display: inline-block; object-fit: contain;">
           <span class="site-brand-name">${CONFIG.hotelName}</span>
         </a>
 
@@ -147,6 +184,49 @@
         dropdown.style.display = 'none';
         userBtn.setAttribute('aria-expanded', 'false');
       });
+    }
+
+    // Guest Notification Bell Toggle
+    const guestNotifBtn = $('publicNotifBtn');
+    const guestNotifDropdown = $('publicNotifDropdown');
+    const markGuestSeenBtn = $('btnMarkGuestNotifsSeen');
+    if (guestNotifBtn && guestNotifDropdown) {
+      guestNotifBtn.onclick = e => {
+        e.stopPropagation();
+        const isOpen = guestNotifDropdown.style.display === 'block';
+        guestNotifDropdown.style.display = isOpen ? 'none' : 'block';
+      };
+
+      document.addEventListener('click', () => {
+        guestNotifDropdown.style.display = 'none';
+      });
+
+      document.querySelectorAll('.guest-notif-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const nid = el.dataset.notifId;
+          if (nid) {
+            const cur = store.get('guestNotifSeenIds', []);
+            if (!cur.includes(nid)) {
+              cur.push(nid);
+              store.set('guestNotifSeenIds', cur.slice(-200));
+            }
+          }
+        });
+      });
+
+      if (markGuestSeenBtn) {
+        markGuestSeenBtn.onclick = e => {
+          e.stopPropagation();
+          const guestNotifs = (typeof Data !== 'undefined' && Data.getGuestNotifications) ? Data.getGuestNotifications(guestSession) : [];
+          const cur = new Set(store.get('guestNotifSeenIds', []));
+          guestNotifs.forEach(n => cur.add(n.id));
+          store.set('guestNotifSeenIds', Array.from(cur).slice(-200));
+          const badge = $('publicNotifBadge');
+          if (badge) badge.remove();
+          document.querySelectorAll('.guest-notif-unread-dot').forEach(d => d.remove());
+          toast('All notifications marked as seen.', 'ok');
+        };
+      }
     }
 
     // Sign out button
@@ -210,7 +290,7 @@
         <div>
           <a href="${pagesPath}main/privacy.html" style="margin-right: 16px;">Privacy</a>
           <a href="${pagesPath}main/terms.html" style="margin-right: 16px;">Terms</a>
-          <a href="${pagesPath}auth/guest-login.html">Staff &amp; Guest Sign In</a>
+          <a href="${pagesPath}auth/login.html">Staff &amp; Guest Sign In</a>
         </div>
       </div>
     `;

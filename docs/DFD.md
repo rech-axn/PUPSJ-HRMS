@@ -12,11 +12,11 @@ The Context Diagram defines the system boundary for the PUPSJ Hotel & Restaurant
 ```mermaid
 graph TD
     %% External Entities
-    Guest["👤 Guest / Public Visitor"]
-    FrontDesk["👔 Front Desk / Superadmin"]
-    Kitchen["👨‍🍳 Kitchen / Restaurant Staff"]
-    Housekeeping["🧹 Housekeeping & Maintenance Personnel"]
-    BIR["🏛️ Bureau of Internal Revenue (BIR)"]
+    Guest["[PLACEHOLDER: Guest Entity - Input guest actor node here] Guest / Public Visitor"]
+    FrontDesk["[PLACEHOLDER: Front Desk Entity - Input staff clerk actor node here] Front Desk / Superadmin"]
+    Kitchen["[PLACEHOLDER: Kitchen Entity - Input kitchen staff node here] Kitchen / Restaurant Staff"]
+    Housekeeping["[PLACEHOLDER: Housekeeping Entity - Input personnel node here] Housekeeping & Maintenance Personnel"]
+    BIR["[PLACEHOLDER: BIR Entity - Input government tax authority node here] Bureau of Internal Revenue (BIR)"]
 
     %% Central Process
     System(("&nbsp;&nbsp;0.0&nbsp;&nbsp;<br/>PUPSJ Hotel & Restaurant<br/>Management System"))
@@ -65,10 +65,10 @@ The Level 0 Diagram decomposes the system into six primary operational subsystem
 ```mermaid
 graph TD
     %% External Entities
-    Guest["👤 Guest"]
-    FrontDesk["👔 Front Desk / Admin"]
-    Kitchen["👨‍🍳 Kitchen Staff"]
-    HKStaff["🧹 Housekeeping Staff"]
+    Guest["[PLACEHOLDER: Guest Entity - Input guest actor node here] Guest"]
+    FrontDesk["[PLACEHOLDER: Front Desk Entity - Input staff clerk actor node here] Front Desk / Admin"]
+    Kitchen["[PLACEHOLDER: Kitchen Entity - Input kitchen staff node here] Kitchen Staff"]
+    HKStaff["[PLACEHOLDER: Housekeeping Entity - Input personnel node here] Housekeeping Staff"]
 
     %% Data Stores
     D1[("D1: Guest Accounts & Profiles")]
@@ -134,7 +134,7 @@ graph TD
 
 ```mermaid
 graph TD
-    Guest["👤 Guest"]
+    Guest["[PLACEHOLDER: Guest Entity - Input guest actor node here] Guest"]
     D2[("D2: Rooms Inventory")]
     D3[("D3: Reservations")]
     D7[("D7: Audit Trail")]
@@ -169,7 +169,7 @@ In compliance with Philippine Tax Regulations (National Internal Revenue Code / 
 
 ```mermaid
 graph TD
-    Client["👤 Guest / Front Desk"]
+    Client["[PLACEHOLDER: Client Entity - Input guest/front desk actor node here] Guest / Front Desk"]
     D3[("D3: Folios & Ledger")]
     D7[("D7: Audit Trail")]
 

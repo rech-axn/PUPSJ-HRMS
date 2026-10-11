@@ -5,21 +5,25 @@
 
 ---
 
-## 1. Reservation State Machine
+## 1. Reservation & Inventory Hold State Machines
 
-### 1.1 State Diagram
+### 1.1 Reservation State Diagram
+
+Online reservations are created directly in the `Confirmed` state upon verified payment settlement. The `Pending` state is never used for online bookings and exists solely for staff-assisted front-desk bookings awaiting an in-person deposit window.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Pending : Online Booking Initiated
+    [*] --> Confirmed : Online 50% Down Payment Succeeded (Card / GCash / Maya / Bank Webhook)
+    [*] --> Confirmed : Front Desk Walk-In Full Payment / Check-In
+    [*] --> Pending : Staff-Assisted Booking Awaiting Deposit (Receptionist Window)
 
-    Pending --> Confirmed : 50% Guarantee Deposit Paid (OR Issued)
-    Pending --> Confirmed : Immediate Walk-In / Staff Desk
-    Pending --> Cancelled : 24h Expiration Timer Elapsed / Guest Cancel
+    Pending --> Confirmed : Front Desk Deposit Collected (depositPaid >= depositRequired)
+    Pending --> Cancelled : Hold Window Expired / Cancelled by Staff
 
-    Confirmed --> CheckedIn : Front Desk Check-In on Arrival (Date >= ci)
-    Confirmed --> Cancelled : Free Cancellation Window (>= 48h before ci)
-    Confirmed --> NoShow : Arrival Day Passes without Check-In (Date > ci)
+    Confirmed --> CheckedIn : Front Desk Check-In on Arrival (Date >= ci, Valid ID, depositPaid >= depositRequired)
+    Confirmed --> Cancelled : Free Cancellation Window (>= 3 Days before Arrival -> 100% Refund)
+    Confirmed --> Cancelled : Late Cancellation Window (< 3 Days before Arrival -> 30% Deduction, 70% Refund)
+    Confirmed --> NoShow : Arrival Date Passes without Check-In (Date > ci -> 100% Retained, 0% Refund)
 
     CheckedIn --> CheckedOut : Express / Desk Check-Out (Folio Balance == 0)
 
@@ -28,18 +32,77 @@ stateDiagram-v2
     CheckedOut --> [*]
 ```
 
-### 1.2 Transition Matrix
+### 1.2 Reservation Transition Matrix
 
 | Initial State | Event / Trigger | Guard Condition | Target State | Side Effects & Actions |
 | :--- | :--- | :--- | :--- | :--- |
-| `[None]` | Web booking initiated | Valid dates, capacity OK | `Pending` | Set 24h `holdExpiresAt`, calculate 50% deposit due. |
-| `Pending` | Payment received | Amount $\ge$ 50% deposit | `Confirmed` | Issue BIR `OR-#####`, clear `holdExpiresAt`, lock room allocation. |
-| `Pending` | Hold expires | `now() > holdExpiresAt` | `Cancelled` | Release room allocation back to free inventory pool. |
-| `Confirmed` | Guest arrives | Date $\ge$ Check-in date | `Checked-in` | Record check-in time, set physical room HK status to `Occupied`. |
-| `Confirmed` | Cancellation requested | Lead time $\ge$ 48 hours | `Cancelled` | Full refund policy notice, release room inventory. |
-| `Confirmed` | Cancellation requested | Lead time $<$ 48 hours | `Cancelled` | Forfeit 50% guarantee deposit per hotel terms, release room. |
-| `Confirmed` | Day passes | Date $>$ Check-in date | `No-show` | Mark No-show, retain deposit, release room for walk-ins. |
-| `Checked-in` | Departure | Folio Balance $== 0$ | `Checked-out` | Mark room `Dirty` (Urgent if arrival today), award loyalty points. |
+| `[None]` | Online Down Payment | `PaymentIntent.status == Succeeded`, room unit available | `Confirmed` | Issue BIR `OR-#####`, record unified payment, open folio with deposit credit, consume hold, assign room, send guest confirmation voucher & hotel notification. `confirmedBy: 'System (payment)'`. |
+| `[None]` | Staff-Assisted Booking | Staff session, temporary hold window specified | `Pending` | Holds room unit temporarily until receptionist-chosen deadline. |
+| `Pending` | Deposit Settled | Amount $\ge$ 50% required deposit | `Confirmed` | Issue BIR `OR-#####`, lock allocation, notify guest. |
+| `Pending` | Staff Hold Expires | Current time $>$ hold deadline | `Cancelled` | Release inventory back to free pool. |
+| `Confirmed` | Guest Arrives | Date $\ge$ Check-in date, valid Govt ID recorded, `depositPaid >= depositRequired` | `Checked-in` | Record check-in timestamp, update physical room HK status to `Occupied`. |
+| `Confirmed` | Cancellation ($\ge 3$ days) | `daysUntilArrival >= CONFIG.freeCancelDays` (3 days) | `Cancelled` | Issue 100% full refund (`Refund` payment with unique OR), release room inventory, release promo if redeemed. |
+| `Confirmed` | Cancellation ($< 3$ days) | `daysUntilArrival < CONFIG.freeCancelDays` (3 days) | `Cancelled` | Deduct 30% fee (`CONFIG.lateCancelFeePct`), refund remaining 70% (`Refund` payment with unique OR), release room inventory. |
+| `Confirmed` | No-Show | Current date $>$ Check-in date | `No-show` | Forfeit 100% of payments received (0% refund), record audit trail, release room inventory for walk-ins. |
+| `Checked-in` | Departure Checkout | Folio Balance $== 0$ (or Admin approval override) | `Checked-out` | Mark room `Dirty` (Urgent if next arrival today), award loyalty points. |
+
+---
+
+### 1.3 BookingHold State Machine
+
+Protects room inventory while the guest enters credentials and executes payment.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Active : Visitor Clicks "Reserve" (Auth Verified, Hold Created)
+
+    Active --> Paid : Payment Succeeded / Bank Webhook Callback (Finalize Transaction)
+    Active --> Expired : 15 min Timer Elapsed (30 min for Bank Transfer)
+    Active --> Cancelled : 3 Failed Payment Attempts / Guest Clicks "Cancel & Release Room"
+
+    Paid --> [*]
+    Expired --> [*]
+    Cancelled --> [*]
+```
+
+#### BookingHold Transition Matrix
+
+| Initial State | Event / Trigger | Guard Condition | Target State | Side Effects & Actions |
+| :--- | :--- | :--- | :--- | :--- |
+| `[None]` | `BookingService.startHold` | Guest session active, dates valid, `unitsFree >= 1` | `Active` | Generates `HLD-#####`, sets `expiresAt = now + 15m` (extended to 30m for bank), locks 1 room inventory unit. |
+| `Active` | Payment Succeeded | `PaymentIntent.status == Succeeded` | `Paid` | Consumes hold, finalizes `Reservation` as `Confirmed`. |
+| `Active` | Expiration Timer | `Date.now() >= expiresAt` | `Expired` | Releases locked room inventory unit back to free pool, releases promo code. |
+| `Active` | Max Attempts Reached | `attempts >= CONFIG.maxPayAttempts` (3) | `Cancelled` | Releases inventory hold, informs guest to re-select dates. |
+| `Active` | Guest Releases Room | Guest clicks "Cancel and release room" | `Cancelled` | Immediately unlocks room unit, cancels active payment intents. |
+
+---
+
+### 1.4 PaymentIntent State Machine
+
+Tracks payment lifecycle across simulated gateways and webhook callbacks.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Created : Guest Selects Payment Method
+
+    Created --> Processing : Guest Submits Card / E-Wallet Credentials
+    Created --> AwaitingBank : Guest Selects Bank Transfer (QR Ph Sheet Opened)
+
+    Processing --> Succeeded : Luhn Valid / Test Card 4242 / E-Wallet Approved
+    Processing --> Failed : Card Declined / Insufficient Funds / Expired Card
+    
+    AwaitingBank --> Succeeded : Bank Callback Webhook Received (`outcome = 'paid'`)
+    AwaitingBank --> Failed : Bank Callback Webhook Received (`outcome = 'declined'`)
+    AwaitingBank --> Expired : Bank Hold Timeout Elapsed (30 Minutes without Callback)
+
+    Failed --> Processing : Guest Retries Alternative Card / Method (Attempts < 3)
+    Failed --> Cancelled : Max Attempts Reached
+
+    Succeeded --> [*]
+    Cancelled --> [*]
+    Expired --> [*]
+```
+
 
 ---
 

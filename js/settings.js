@@ -236,12 +236,38 @@
               <div class="field">
                 <label for="cfgDepositPct">Required Deposit Guarantee (%)</label>
                 <input type="number" id="cfgDepositPct" value="${CONFIG.depositPct || 50}" min="10" max="100" step="5" required>
-                <span class="text-xs text-muted">Pre-payment required to confirm</span>
+                <span class="text-xs text-muted">Pre-payment required to confirm stay</span>
               </div>
               <div class="field">
                 <label for="cfgFreeCancelDays">Free Cancellation Threshold (Days)</label>
                 <input type="number" id="cfgFreeCancelDays" value="${CONFIG.freeCancelDays || 3}" min="0" max="30" step="1" required>
-                <span class="text-xs text-muted">Prior to arrival date</span>
+                <span class="text-xs text-muted">Days prior to arrival for full refund</span>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div class="field">
+                <label for="cfgLateCancelFeePct">Late Cancellation Deduction (%)</label>
+                <input type="number" id="cfgLateCancelFeePct" value="${CONFIG.lateCancelFeePct || 30}" min="0" max="100" step="5" required>
+                <span class="text-xs text-muted">Deducted when cancelled under ${CONFIG.freeCancelDays || 3} days</span>
+              </div>
+              <div class="field">
+                <label for="cfgMaxPayAttempts">Max Payment Attempts</label>
+                <input type="number" id="cfgMaxPayAttempts" value="${CONFIG.maxPayAttempts || 3}" min="1" max="10" step="1" required>
+                <span class="text-xs text-muted">Attempts before releasing room hold</span>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div class="field">
+                <label for="cfgHoldMinutes">Online Room Hold Duration (Minutes)</label>
+                <input type="number" id="cfgHoldMinutes" value="${CONFIG.holdMinutes || 15}" min="5" max="60" step="1" required>
+                <span class="text-xs text-muted">Standard hold window for card &amp; e-wallet</span>
+              </div>
+              <div class="field">
+                <label for="cfgBankHoldMinutes">Bank Transfer Hold Duration (Minutes)</label>
+                <input type="number" id="cfgBankHoldMinutes" value="${CONFIG.bankHoldMinutes || 30}" min="10" max="120" step="5" required>
+                <span class="text-xs text-muted">Extended hold for QR Ph / online banking callback</span>
               </div>
             </div>
 
@@ -454,19 +480,19 @@
               </button>
             </div>
 
-            <!-- Scenario 3: Kitchen Rush -->
+            <!-- Scenario 3: Dining Rush -->
             <div class="card" style="padding: 16px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                  <span class="pill pill--warn">POS &amp; KDS SLAs</span>
+                  <span class="pill pill--warn">POS Dining Rush</span>
                 </div>
-                <h3 style="font-size: 16px; margin: 0 0 6px 0;">Kitchen Rush</h3>
+                <h3 style="font-size: 16px; margin: 0 0 6px 0;">Dining Rush</h3>
                 <p class="text-xs text-secondary" style="margin-bottom: 14px; line-height: 1.5;">
-                  Injects active dining tickets with staggered age timers (&lt;10m, 10-20m amber, &gt;20m red alert) across kitchen and bar.
+                  Injects active dining tickets across dine-in tables and room service orders.
                 </p>
               </div>
               <button type="button" class="btn btn-sm" onclick="loadScenario('kitchen-rush')">
-                <span class="ic" data-icon="play">[ICON: play]</span> Load Kitchen Rush
+                <span class="ic" data-icon="play">[ICON: play]</span> Load Dining Rush
               </button>
             </div>
 
@@ -574,6 +600,10 @@
         const sc = parseFloat($('cfgSvcPct').value) || 10;
         const dep = parseInt($('cfgDepositPct').value, 10) || 50;
         const freeCancel = parseInt($('cfgFreeCancelDays').value, 10) || 3;
+        const lateCancel = parseFloat($('cfgLateCancelFeePct').value) || 30;
+        const maxAttempts = parseInt($('cfgMaxPayAttempts').value, 10) || 3;
+        const holdMins = parseInt($('cfgHoldMinutes').value, 10) || 15;
+        const bankHoldMins = parseInt($('cfgBankHoldMinutes').value, 10) || 30;
         const respTime = $('cfgResponseTime').value.trim();
         const tin = $('cfgTin').value.trim();
         const permit = $('cfgPermit').value.trim();
@@ -582,12 +612,16 @@
           tax: { vatPct: vat, svcPct: sc },
           depositPct: dep,
           freeCancelDays: freeCancel,
+          lateCancelFeePct: lateCancel,
+          maxPayAttempts: maxAttempts,
+          holdMinutes: holdMins,
+          bankHoldMinutes: bankHoldMins,
           responseTime: respTime,
           legal: { tin: tin, permit: permit }
         };
 
         saveConfigOverrides(overrides);
-        Data.audit('Update Settings', 'Config', 'Financial', `VAT: ${vat}%, SC: ${sc}%, Deposit: ${dep}%`);
+        Data.audit('Update Settings', 'Config', 'Financial', `VAT: ${vat}%, SC: ${sc}%, Deposit: ${dep}%, Holds: ${holdMins}m, LateCancel: ${lateCancel}%`);
         toast('Financial & tax policies saved!', 'ok');
         renderApp();
       };
@@ -631,7 +665,7 @@
     if (btnExp) {
       btnExp.onclick = () => {
         const backup = {
-          version: '2.0',
+          version: '1.0',
           exportedAt: nowISO(),
           hotelName: CONFIG.hotelName,
           data: {}
@@ -822,7 +856,7 @@
     }
 
     else if (scenario === 'kitchen-rush') {
-      // Staggered orders for Kitchen and Bar
+      // Staggered dining room orders
       const orders = Data.getOrders();
       const now = new Date();
 
@@ -878,16 +912,17 @@
         },
         {
           code: 'ORD-KR4',
-          source: 'Bar Lounge',
+          source: 'Main Dining',
           target: 'Table 8',
-          station: 'Bar',
-          status: 'Preparing',
+          station: 'Kitchen',
+          status: 'Unpaid',
+          payStatus: 'Unpaid',
           time: createAgoTime(8),
-          subtotal: 750,
-          total: 750,
+          subtotal: 320,
+          total: 320,
           billed: false,
           items: [
-            { name: 'San Juan Sunset Cocktail', qty: 2, price: 320, station: 'Bar' }
+            { name: 'Lemongrass Ginger Iced Tea', qty: 2, price: 160, station: 'Kitchen' }
           ]
         }
       ];

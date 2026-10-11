@@ -11,7 +11,7 @@
 // execution without external backend servers. In production, passwords must be
 // hashed server-side (bcrypt/Argon2) and authenticated via secure HTTP-only cookies.
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 // ─── Default Canonical Room Types ───
 const DEFAULT_TYPES = [
@@ -90,7 +90,7 @@ const generateSeeds = () => {
     { id: 5, name: 'Pedro Cruz', email: 'pedro@pupsj.edu.ph', department: 'Housekeeping', role: 'Housekeeping', shift: 'Day', phone: '+63 917 100 0005', active: true, created: '2026-03-10' },
     { id: 6, name: 'Ana Bautista', email: 'ana@pupsj.edu.ph', department: 'Housekeeping', role: 'Housekeeping', shift: 'Night', phone: '+63 917 100 0006', active: true, created: '2026-04-05' },
     { id: 7, name: 'Carlo Navarro', email: 'carlo@pupsj.edu.ph', department: 'Maintenance', role: 'Maintenance', shift: 'Day', phone: '+63 917 100 0007', active: true, created: '2026-05-20' },
-    { id: 8, name: 'Chef Marco Valdez', email: 'kitchen@pupsj.edu.ph', department: 'Kitchen', role: 'Kitchen', shift: 'Day', phone: '+63 917 100 0009', active: true, created: '2026-06-01' },
+    { id: 8, name: 'Rechelle Cansila', email: 'restaurant@pupsj.edu.ph', department: 'Restaurant', role: 'Restaurant Receptionist', shift: 'Day', phone: '+63 917 100 0009', active: true, created: '2026-06-01' },
     { id: 9, name: 'Ben Aquino', email: 'ben@pupsj.edu.ph', department: 'Security', role: 'Security', shift: 'Night', phone: '+63 917 100 0008', active: true, created: '2026-06-01' }
   ];
 
@@ -318,7 +318,7 @@ const generateSeeds = () => {
     },
     {
       code: 'SUNSETBOGO',
-      title: 'Sunset Cocktail & Tapas',
+      title: 'Sunset Appetizers & Beverages',
       description: '50% off appetizer tapas boards when ordering two or more beverages.',
       appliesTo: 'restaurant',
       type: 'percent',
@@ -388,10 +388,10 @@ const generateSeeds = () => {
     { id: 'MNU-402', name: 'Mango Tres Leches Cake', category: 'Desserts', desc: 'Sponge cake soaked in three milks, layered with sweet Carabao mango coulis.', price: 260, available: true, station: 'Kitchen', tags: ['Dessert', 'Sweet'] },
     { id: 'MNU-403', name: 'Warm Batangas Tablea Fondant', category: 'Desserts', desc: 'Molten dark chocolate cake crafted from native cacao tablea with vanilla bean cream.', price: 310, available: true, station: 'Kitchen', tags: ['Dessert', 'Chocolate'] },
 
-    { id: 'MNU-501', name: 'Fresh Ripe Mango Shake', category: 'Drinks', desc: 'Chilled ripe Philippine mango blended with organic milk.', price: 180, available: true, station: 'Bar', tags: ['Drink', 'Fresh'] },
-    { id: 'MNU-502', name: 'Calamansi Honey Cooler', category: 'Drinks', desc: 'Freshly pressed local citrus with raw wild honey and fresh mint leaves.', price: 160, available: true, station: 'Bar', tags: ['Drink', 'Non-Alcoholic'] },
-    { id: 'MNU-503', name: 'Barista Latte / Cappuccino', category: 'Drinks', desc: 'Locally sourced single-origin Arabica espresso with steamed whole milk.', price: 170, available: true, station: 'Bar', tags: ['Drink', 'Coffee'] },
-    { id: 'MNU-504', name: 'Signature Sangria (Glass)', category: 'Drinks', desc: 'House red wine infused with fresh citrus, berries, and a touch of brandy.', price: 340, available: true, station: 'Bar', tags: ['Drink', 'Wine'] }
+    { id: 'MNU-501', name: 'Fresh Ripe Mango Shake', category: 'Drinks', desc: 'Chilled ripe Philippine mango blended with organic milk.', price: 180, available: true, station: 'Kitchen', tags: ['Drink', 'Fresh'] },
+    { id: 'MNU-502', name: 'Calamansi Honey Cooler', category: 'Drinks', desc: 'Freshly pressed local citrus with raw wild honey and fresh mint leaves.', price: 160, available: true, station: 'Kitchen', tags: ['Drink', 'Non-Alcoholic'] },
+    { id: 'MNU-503', name: 'Barista Latte / Cappuccino', category: 'Drinks', desc: 'Locally sourced single-origin Arabica espresso with steamed whole milk.', price: 170, available: true, station: 'Kitchen', tags: ['Drink', 'Coffee'] },
+    { id: 'MNU-504', name: 'Lemongrass Ginger Iced Tea', category: 'Drinks', desc: 'Fresh brewed native lemongrass and ginger infused with pandan and raw honey.', price: 160, available: true, station: 'Kitchen', tags: ['Drink', 'Fresh'] }
   ];
 
   // Restaurant Tables (num as Number, status, area)
@@ -403,8 +403,8 @@ const generateSeeds = () => {
     { id: 'TBL-5', num: 5, name: 'Table 5', seats: 2, area: 'Garden Terrace', status: 'Free', st: 'Free' },
     { id: 'TBL-6', num: 6, name: 'Table 6', seats: 4, area: 'Garden Terrace', status: 'Free', st: 'Free' },
     { id: 'TBL-7', num: 7, name: 'Table 7', seats: 8, area: 'Private Room', status: 'Free', st: 'Free' },
-    { id: 'TBL-8', num: 8, name: 'Table 8', seats: 2, area: 'Bar Lounge', status: 'Free', st: 'Free' },
-    { id: 'TBL-9', num: 9, name: 'Table 9', seats: 4, area: 'Bar Lounge', status: 'Free', st: 'Free' }
+    { id: 'TBL-8', num: 8, name: 'Table 8', seats: 2, area: 'Main Dining', status: 'Free', st: 'Free' },
+    { id: 'TBL-9', num: 9, name: 'Table 9', seats: 4, area: 'Main Dining', status: 'Free', st: 'Free' }
   ];
 
   // Table Reservations
@@ -707,7 +707,7 @@ const generateSeeds = () => {
   const audit = [
     { id: 1, time: `${T} 08:30`, user: 'Carlo Navarro', action: 'Created maintenance request', recordType: 'Maintenance', type: 'Maintenance', recordId: 'MNT-101', idVal: 'MNT-101', details: 'Room 501 door latch' },
     { id: 2, time: `${T} 11:20`, user: 'Maria Santos', action: 'Assigned housekeeping request', recordType: 'Housekeeping', type: 'Housekeeping', recordId: 'HKR-101', idVal: 'HKR-101', details: 'Room 305 extra pillows' },
-    { id: 3, time: `${T} 12:45`, user: 'Chef Marco Valdez', action: 'Updated restaurant order', recordType: 'Order', type: 'Order', recordId: 'ORD-1001', idVal: 'ORD-1001', details: 'Billed to Room 305 folio' }
+    { id: 3, time: `${T} 12:45`, user: 'Rechelle Cansila', action: 'Updated restaurant order', recordType: 'Order', type: 'Order', recordId: 'ORD-1001', idVal: 'ORD-1001', details: 'Billed to Room 305 folio' }
   ];
 
   return {
@@ -728,10 +728,13 @@ const generateSeeds = () => {
     mReq,
     feedback,
     guestAccounts,
+    adminAccounts,
     guestProfiles: {},
     audit,
     notifSeen: { count: 0, time: '' },
-    loyalty
+    loyalty,
+    bookingHolds: [],
+    paymentIntents: []
   };
 };
 
@@ -746,25 +749,103 @@ const Data = {
             detail: { entity, action, detail, timestamp: Date.now() }
           }));
         }
-      } catch (e) {}
+      } catch (e) { }
     }
   },
   runExpiryJobs() {
+    if (typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.HoldService) {
+      PUPSJ_Services.HoldService.expire();
+    }
     if (typeof PUPSJ_Services !== 'undefined' && PUPSJ_Services.ReservationService) {
       PUPSJ_Services.ReservationService.runExpiryJobs();
     }
   },
-  // Initializes or migrates storage on startup
+  getBusinessDate() {
+    return store.get('businessDate', null);
+  },
+  setBusinessDate(newDate) {
+    store.set('businessDate', newDate);
+    this.emit('businessDate', 'update', { date: newDate });
+  },
+  resetBusinessDate() {
+    store.remove('businessDate');
+    this.emit('businessDate', 'reset', {});
+  },
+
+  // ─── Stores: Booking Holds & Payment Intents ───
+  getBookingHolds() {
+    return store.get('bookingHolds', []);
+  },
+  saveBookingHolds(list) {
+    store.set('bookingHolds', list);
+    this.emit('BookingHold', 'update', { count: list.length });
+  },
+  findHold(holdId) {
+    return this.getBookingHolds().find(h => h.holdId === holdId || h.id === holdId) || null;
+  },
+
+  getPaymentIntents() {
+    return store.get('paymentIntents', []);
+  },
+  savePaymentIntents(list) {
+    store.set('paymentIntents', list);
+    this.emit('PaymentIntent', 'update', { count: list.length });
+  },
+  findIntent(intentId) {
+    return this.getPaymentIntents().find(i => i.intentId === intentId || i.id === intentId) || null;
+  },
+
+  // Initializes or migrates storage on startup (non-destructive)
   init() {
     const curSchema = store.get('schema', 0);
     const hasRes = store.get('res', null);
 
-    if (!curSchema || curSchema < SCHEMA_VERSION || !hasRes) {
-      console.info('Initializing or migrating PUPSJ data schema to v' + SCHEMA_VERSION + '...');
+    if (!curSchema || !hasRes) {
+      console.info('Initializing PUPSJ data schema to v' + SCHEMA_VERSION + '...');
       const fresh = generateSeeds();
       Object.entries(fresh).forEach(([k, v]) => {
         store.set(k, v);
       });
+      return;
+    }
+
+    if (curSchema < SCHEMA_VERSION) {
+      console.info(`Migrating PUPSJ data schema from v${curSchema} to v${SCHEMA_VERSION}...`);
+      // Non-destructive migration for existing reservations
+      const reservations = store.get('res', []);
+      let changed = false;
+      const defaultDepositPct = (typeof CONFIG !== 'undefined' && CONFIG.depositPct) ? CONFIG.depositPct : 50;
+
+      reservations.forEach(r => {
+        if (r.depositPct == null) {
+          r.depositPct = defaultDepositPct;
+          changed = true;
+        }
+        const tot = this.tot ? this.tot(r) : (r.total || (r.rt || 3200));
+        if (r.depositRequired == null) {
+          r.depositRequired = Math.ceil(tot * (r.depositPct / 100));
+          changed = true;
+        }
+        const paid = (r.pay || []).filter(p => p.k !== 'Refund' && p.t !== 'Refund').reduce((s, p) => s + (Number(p.a || p.amt) || 0), 0);
+        if (r.depositPaid == null) {
+          r.depositPaid = paid;
+          changed = true;
+        }
+        if (r.balanceDue == null) {
+          r.balanceDue = Math.max(0, tot - paid);
+          changed = true;
+        }
+        if (!r.confirmedBy && (r.st === 'Confirmed' || r.st === 'Checked-in' || r.st === 'Checked-out')) {
+          r.confirmedBy = 'System (migration)';
+          changed = true;
+        }
+      });
+      if (changed) store.set('res', reservations);
+
+      if (!store.get('bookingHolds', null)) store.set('bookingHolds', []);
+      if (!store.get('paymentIntents', null)) store.set('paymentIntents', []);
+      store.set('schema', SCHEMA_VERSION);
+      console.info(`Migration to v${SCHEMA_VERSION} complete.`);
     }
   },
 
@@ -792,7 +873,7 @@ const Data = {
     const counter = this.nextSequence(cleanPrefix || 'GEN', 1000);
     return (prefix || 'ID-') + counter;
   },
-  
+
   nextSequence(prefix, start = 1000) {
     const seqs = store.get('_sequences', {});
     const cur = Number(seqs[prefix] || start);
@@ -1126,7 +1207,7 @@ const Data = {
     }
 
     // Security check: Guest session cannot spoof walk-in or createdBy
-    if (guestSession) {
+    if (!staffSession && guestSession) {
       if (data.source && data.source !== 'Online') {
         throw new Error('Unauthorized source: guest accounts cannot create Walk-in or Staff-assisted reservations.');
       }
@@ -1150,6 +1231,16 @@ const Data = {
       };
       if (source === 'Walk-in' && (!idType || !idNumber)) {
         throw new Error('Government ID verification required: Walk-in room bookings require valid ID Type and ID Number.');
+      }
+    }
+
+    // Server-side guard: Online reservations require valid payment and cannot be created unpaid or by staff sessions
+    if (source === 'Online') {
+      if (staffSession && !data.holdId) {
+        throw new Error('Staff sessions cannot create Online reservations. Use Walk-in or Staff-assisted reservation in the staff portal.');
+      }
+      if (!data.initialPayment && !data.holdId) {
+        throw new Error('Unpaid online reservations are prohibited. Online bookings require confirmed down payment.');
       }
     }
 
@@ -1182,6 +1273,12 @@ const Data = {
       throw new Error('Check-out date must be after check-in date.');
     }
 
+    const rateVal = Number(data.rt || data.rate || (typeObj ? typeObj.r : 3200));
+    const nights = Math.max(1, typeof dateDiff === 'function' ? dateDiff(ci, co) : 1);
+    const stayTotal = rateVal * nights;
+    const depPct = data.depositPct != null ? data.depositPct : ((typeof CONFIG !== 'undefined' && CONFIG.depositPct) ? CONFIG.depositPct : 50);
+    const depReq = data.depositRequired != null ? data.depositRequired : Math.ceil(stayTotal * (depPct / 100));
+
     const newRes = {
       c: code,
       g: guestName,
@@ -1194,15 +1291,23 @@ const Data = {
       email: guestEmail,
       m: data.m || data.paymentMethod || 'Credit card',
       p: 'Unpaid',
-      st: data.st || 'Pending',
+      st: (source === 'Online' && (data.initialPayment || data.holdId)) ? 'Confirmed' : (data.st || 'Pending'),
       note: data.note || data.notes || '',
-      rt: Number(data.rt || data.rate || (typeObj ? typeObj.r : 3200)),
+      rt: rateVal,
       promo: data.promo || null,
       source: source,
       createdBy: createdBy,
       idType: idType,
       idNumber: idNumber,
       guestId: guestEmail || (source === 'Walk-in' ? `WALK-${code}` : ''),
+      depositPct: depPct,
+      depositRequired: depReq,
+      depositPaid: 0,
+      balanceDue: stayTotal,
+      holdId: data.holdId || '',
+      paymentIntentId: data.paymentIntentId || '',
+      confirmedAt: data.initialPayment ? (typeof nowISO === 'function' ? nowISO() : new Date().toISOString()) : null,
+      confirmedBy: data.initialPayment ? (data.confirmedBy || (source === 'Walk-in' ? (staffSession?.name || 'Front Desk') : 'System (payment)')) : null,
       created: today(),
       pay: [],
       x: []
@@ -1224,16 +1329,18 @@ const Data = {
     if (data.initialPayment) {
       const p = data.initialPayment;
       const orNum = this.nextOR();
+      const pAmt = Math.round(Number(p.amount));
+      newRes.depositPaid = pAmt;
       newRes.pay.push({
         id: orNum,
         or: orNum,
         d: today(),
-        a: Math.round(Number(p.amount)),
-        amt: Math.round(Number(p.amount)),
+        a: pAmt,
+        amt: pAmt,
         m: p.method,
         k: p.kind || 'Deposit',
         t: p.kind || 'Deposit',
-        note: p.note || (source === 'Walk-in' ? 'Walk-in front desk settlement' : '50% guarantee deposit on booking'),
+        note: p.note || (source === 'Walk-in' ? 'Walk-in front desk settlement' : `${newRes.depositPct}% down payment on booking`),
         auth: p.auth || (source === 'Walk-in' ? 'AUTH-DESK' : ''),
         ref: p.ref || '',
         cardLast4: p.cardLast4 || ''
@@ -1243,8 +1350,12 @@ const Data = {
       } else {
         newRes.st = 'Confirmed';
       }
+      newRes.confirmedAt = newRes.confirmedAt || (typeof nowISO === 'function' ? nowISO() : new Date().toISOString());
+      newRes.confirmedBy = newRes.confirmedBy || (source === 'Walk-in' ? (staffSession?.name || 'Front Desk') : 'System (payment)');
     }
 
+    const calculatedTotal = this.tot ? this.tot(newRes) : stayTotal;
+    newRes.balanceDue = Math.max(0, calculatedTotal - newRes.depositPaid);
     this.syncPaymentStatus(newRes);
     res.unshift(newRes);
     this.saveReservations(res);
@@ -1323,7 +1434,11 @@ const Data = {
   balance(r) { return this.balOf(r); },
   depAmt(r) {
     if (!r) return 0;
-    return Math.ceil(this.roomChg(r) * (CONFIG.depositPct / 100));
+    if (r.depositRequired != null) return r.depositRequired;
+    const cfg = typeof CONFIG !== 'undefined' ? CONFIG : { depositPct: 50 };
+    const pct = r.depositPct || cfg.depositPct || 50;
+    const tot = this.tot ? this.tot(r) : (r.total || (r.rt || 3200));
+    return Math.ceil(tot * (pct / 100));
   },
 
   syncPaymentStatus(r) {
@@ -1420,8 +1535,9 @@ const Data = {
     if (!this.isRoomClean(r.n)) {
       return { success: false, error: `Cannot check in: Room ${r.n} is currently marked Dirty or undergoing cleaning.` };
     }
-    if (this.paidAmt(r) < this.depAmt(r)) {
-      return { success: false, error: `Cannot check in: 50% deposit (${peso(this.depAmt(r))}) has not been settled.` };
+    const reqDep = r.depositRequired != null ? r.depositRequired : this.depAmt(r);
+    if (this.paidAmt(r) < reqDep) {
+      return { success: false, error: `Cannot check in: Required deposit (${peso(reqDep)}) has not been settled.` };
     }
 
     r.st = 'Checked-in';
@@ -1466,13 +1582,6 @@ const Data = {
     const r = this.findRes(code);
     if (!r) return { success: false, error: 'Reservation not found.' };
 
-    if (r.st === 'Checked-in' || r.s === 'Checked-in') {
-      return { success: false, error: 'Checked-in stays cannot be cancelled. Use early check-out instead.' };
-    }
-    if (r.st === 'Cancelled' || r.s === 'Cancelled') {
-      return { success: false, error: 'Reservation is already cancelled.' };
-    }
-
     // Guest ownership check
     if (guestSession && !staffSession) {
       const guestEmail = (guestSession.email || '').toLowerCase().trim();
@@ -1481,18 +1590,30 @@ const Data = {
       }
     }
 
+    if (r.st === 'Checked-in' || r.s === 'Checked-in') {
+      return { success: false, error: 'Checked-in stays cannot be cancelled. Use early check-out instead.' };
+    }
+    if (r.st === 'Cancelled' || r.s === 'Cancelled') {
+      return { success: false, error: 'Reservation is already cancelled.' };
+    }
+
     const T = today();
     const daysUntilArrival = dateDiff(T, r.i);
-    const paid = this.paidAmt(r);
+    const totalPaid = (r.pay || []).filter(p => p.k !== 'Refund' && p.t !== 'Refund').reduce((s, p) => s + (Number(p.a || p.amt) || 0), 0);
+    const priorRefunds = (r.pay || []).filter(p => p.k === 'Refund' || p.t === 'Refund').reduce((s, p) => s + (Number(p.a || p.amt) || 0), 0);
+    const paid = Math.max(0, totalPaid - priorRefunds);
     let refundAmt = 0;
     let retainedFee = 0;
 
-    if (daysUntilArrival >= CONFIG.freeCancelDays) {
+    const freeDays = (typeof CONFIG !== 'undefined' && CONFIG.freeCancelDays != null) ? CONFIG.freeCancelDays : 3;
+    const feePct = (typeof CONFIG !== 'undefined' && CONFIG.lateCancelFeePct != null) ? CONFIG.lateCancelFeePct : 30;
+
+    if (daysUntilArrival >= freeDays) {
       refundAmt = paid;
       retainedFee = 0;
     } else {
-      retainedFee = Math.min(paid, r.rt || 3200);
-      refundAmt = Math.max(0, paid - retainedFee);
+      retainedFee = Math.round(paid * (feePct / 100) * 100) / 100;
+      refundAmt = Math.max(0, Math.round((paid - retainedFee) * 100) / 100);
     }
 
     if (refundAmt > 0) {
@@ -1507,13 +1628,14 @@ const Data = {
         m: r.m || 'Original Payment',
         k: 'Refund',
         t: 'Refund',
-        note: daysUntilArrival >= CONFIG.freeCancelDays ? 'Full policy refund' : 'Partial refund after 1st-night retention',
+        note: daysUntilArrival >= freeDays ? 'Full policy refund' : `Late cancellation policy refund less ${feePct}% fee`,
         auth: 'REF-CANCEL',
         ref: r.c
       });
     }
 
     r.st = 'Cancelled';
+    r.s = 'Cancelled';
     this.syncPaymentStatus(r);
     this.updateReservation(r.c, r);
     this.audit('Cancellation', 'Reservation', r.c, `Cancelled by ${by}. Retained: ${peso(retainedFee)}, Refunded: ${peso(refundAmt)}`);
@@ -1560,14 +1682,41 @@ const Data = {
 
   // ─── Staff & Guest Profiles ───
   getStaff() {
-    return store.get('staff', []);
+    const list = store.get('staff', []);
+    return list.map(s => {
+      if (s.id === 8 || s.email === 'restaurant@pupsj.edu.ph' || s.email === 'kitchen@pupsj.edu.ph' || (s.name && s.name.includes('Marco Valdez'))) {
+        return { ...s, name: 'Rechelle Cansila', email: 'restaurant@pupsj.edu.ph', department: 'Restaurant', role: 'Restaurant Receptionist' };
+      }
+      return s;
+    });
   },
   saveStaff(list) {
     store.set('staff', list);
   },
+  getAdminAccounts() {
+    return store.get('adminAccounts', []);
+  },
+  saveAdminAccounts(list) {
+    store.set('adminAccounts', list);
+  },
   findStaffByEmail(email) {
     if (!email) return null;
-    return this.getStaff().find(s => s.email.toLowerCase() === email.trim().toLowerCase()) || null;
+    const em = email.trim().toLowerCase();
+    const staffMatch = this.getStaff().find(s => s.email && s.email.toLowerCase() === em);
+    if (staffMatch) return staffMatch;
+    const adminAccounts = this.getAdminAccounts();
+    const adminMatch = adminAccounts.find(a => a.email && a.email.toLowerCase() === em);
+    if (adminMatch) return adminMatch;
+    if (em === 'admin@pupsj.edu.ph') {
+      return { id: 0, adminId: 'ADM-001', name: 'Superadmin', email: 'admin@pupsj.edu.ph', role: 'superadmin' };
+    }
+    if (em === 'hotel@pupsj.edu.ph') {
+      return { id: 2, name: 'Hotel Receptionist', email: 'hotel@pupsj.edu.ph', role: 'hotel_receptionist' };
+    }
+    if (em === 'restaurant@pupsj.edu.ph') {
+      return { id: 8, name: 'Rechelle Cansila', email: 'restaurant@pupsj.edu.ph', role: 'restaurant_receptionist' };
+    }
+    return null;
   },
 
   getGuestAccounts() {
@@ -1663,7 +1812,7 @@ const Data = {
     return { success: true, profile: newAcc };
   },
 
-    saveGuest(data) {
+  saveGuest(data) {
     if (!data) return null;
     const name = (data.name || '').trim();
     if (!name) return { success: false, error: 'Guest name is required.' };
@@ -1705,26 +1854,83 @@ const Data = {
     return { success: true };
   },
 
-  // ─── Session Management (Mutually Exclusive) ───
+  // ─── Session Management (Isolated Per-Tab via sessionStorage with store fallback) ───
   getStaffSession() {
-    return store.get('sessionStaff', null);
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const val = sessionStorage.getItem('pupsj_sessionStaff');
+        if (val) {
+          const u = JSON.parse(val);
+          if (u && (u.role === 'restaurant_receptionist' || u.email === 'restaurant@pupsj.edu.ph' || (u.name && u.name.includes('Marco Valdez')))) {
+            if (u.name !== 'Rechelle Cansila') {
+              u.name = 'Rechelle Cansila';
+              sessionStorage.setItem('pupsj_sessionStaff', JSON.stringify(u));
+            }
+          }
+          return u;
+        }
+        // If guest session active in this tab, do not fall back to staff session
+        if (sessionStorage.getItem('pupsj_sessionGuest')) {
+          return null;
+        }
+      }
+    } catch (e) { }
+    // Fallback: Check store for active cross-tab session
+    try {
+      const persisted = store.get('sessionStaff', null);
+      if (persisted && typeof persisted === 'object') {
+        if (persisted.role === 'restaurant_receptionist' || persisted.email === 'restaurant@pupsj.edu.ph' || (persisted.name && persisted.name.includes('Marco Valdez'))) {
+          persisted.name = 'Rechelle Cansila';
+        }
+        return persisted;
+      }
+    } catch (e) { }
+    return null;
   },
   setStaffSession(user) {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('pupsj_sessionStaff', JSON.stringify(user));
+        sessionStorage.removeItem('pupsj_sessionGuest');
+      }
+    } catch (e) { }
     store.remove('sessionGuest');
     store.set('sessionStaff', user);
   },
   clearStaffSession() {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('pupsj_sessionStaff');
+      }
+    } catch (e) { }
     store.remove('sessionStaff');
   },
 
   getGuestSession() {
-    return store.get('sessionGuest', null);
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const val = sessionStorage.getItem('pupsj_sessionGuest');
+        if (val) return JSON.parse(val);
+      }
+    } catch (e) { }
+    return null;
   },
   setGuestSession(guest) {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('pupsj_sessionGuest', JSON.stringify(guest));
+        sessionStorage.removeItem('pupsj_sessionStaff');
+      }
+    } catch (e) { }
     store.remove('sessionStaff');
-    store.set('sessionGuest', guest);
+    store.remove('sessionGuest');
   },
   clearGuestSession() {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('pupsj_sessionGuest');
+      }
+    } catch (e) { }
     store.remove('sessionGuest');
     if (typeof window !== 'undefined' && typeof window.clearPendingIntent === 'function') {
       window.clearPendingIntent();
@@ -1973,7 +2179,7 @@ const Data = {
       throw new Error('Authentication required: a signed-in guest or staff session is required to place an order.');
     }
 
-    if (guestSession) {
+    if (!staffSession && guestSession) {
       if (data.source && data.source !== 'Online') {
         throw new Error('Unauthorized source: guest accounts cannot set walk-in orders.');
       }
@@ -2094,18 +2300,15 @@ const Data = {
       this.savePayments(payments);
     }
 
-    // Do NOT force order.status = 'Served'! Kitchen and billing status are decoupled (BR-030).
-    // If order is Dine-in and already Served, payment transition triggers table status
+    // When a Dine-in order is settled, transition table to Needs cleaning
     if (order.type === 'Dine-in' && (order.table || order.tableNo)) {
       const tNum = order.table || order.tableNo;
-      if (order.status === 'Served') {
-        const tables = this.getTables();
-        const t = tables.find(x => x.num === tNum || x.id === tNum);
-        if (t) {
-          t.st = 'Needs cleaning';
-          t.status = 'Needs cleaning';
-          this.saveTables(tables);
-        }
+      const tables = this.getTables();
+      const t = tables.find(x => x.num === tNum || x.id === tNum);
+      if (t) {
+        t.st = 'Needs cleaning';
+        t.status = 'Needs cleaning';
+        this.saveTables(tables);
       }
     }
 
@@ -2517,95 +2720,232 @@ const Data = {
     }));
   },
 
-  // ─── Live Dynamic Notifications (Derived Live) ───
-  getNotifications() {
+  // ─── Live Dynamic Notifications (Derived Live & Portal-Aware) ───
+  getNotifications(portalType) {
     const T = today();
     const items = [];
 
-    // 1. Unread guest message threads
-    this.getThreads()
-      .filter(t => t.unreadStaff > 0 && t.status === 'Open')
-      .forEach(t => {
+    // Automatically detect portal if not explicitly provided
+    let portal = portalType;
+    if (!portal && typeof window !== 'undefined' && window.location) {
+      const normPath = window.location.pathname.replace(/\\/g, '/');
+      if (normPath.includes('/hotel/')) portal = 'hotel';
+      else if (normPath.includes('/restaurant/')) portal = 'restaurant';
+      else if (normPath.includes('/guest/')) portal = 'guest';
+      else if (normPath.includes('/management/')) portal = 'management';
+      else {
+        const staff = this.getStaffSession();
+        if (staff && staff.role === 'hotel_receptionist') portal = 'hotel';
+        else if (staff && staff.role === 'restaurant_receptionist') portal = 'restaurant';
+        else portal = 'management';
+      }
+    }
+    if (!portal) portal = 'management';
+
+    const base = portal === 'hotel' ? '../hotel/' :
+      portal === 'restaurant' ? '../restaurant/' :
+        portal === 'guest' ? '../guest/' : '../management/';
+
+    const includeHotel = portal === 'hotel' || portal === 'management';
+    const includeRest = portal === 'restaurant' || portal === 'management';
+
+    // 1. Online Bookings (Instant confirmed room bookings)
+    if (includeHotel) {
+      const storedNotifs = store.get('notifications', []);
+      storedNotifs.forEach(n => {
         items.push({
-          id: 'notif-' + t.id,
+          id: n.id || ('notif-bk-' + (n.refId || n.code)),
+          type: 'booking',
+          title: n.title || `New Online Booking ${n.refId || ''}`,
+          desc: n.message || `Confirmed online room reservation`,
+          url: `${base}reservations.html?code=${n.refId || ''}`,
+          time: n.time ? (n.time.includes('T') ? n.time.slice(0, 16).replace('T', ' ') : n.time) : 'Recent'
+        });
+      });
+    }
+
+    // 2. Unread guest message threads
+    if (includeHotel) {
+      this.getThreads()
+        .filter(t => t.unreadStaff > 0 && t.status === 'Open')
+        .forEach(t => {
+          items.push({
+            id: 'notif-msg-' + t.id,
+            type: 'message',
+            title: `Message from ${t.guestName}`,
+            desc: t.subject,
+            url: `${base}messages.html?id=${t.id}`,
+            time: t.updated
+          });
+        });
+    }
+
+    // 3. New contact inquiries
+    if (includeHotel) {
+      this.getInquiries()
+        .filter(i => i.status === 'New')
+        .forEach(i => {
+          items.push({
+            id: 'notif-inq-' + (i.ref || i.id),
+            type: 'inquiry',
+            title: `New Inquiry: ${i.name}`,
+            desc: i.type,
+            url: `${base}inquiries.html?ref=${i.ref || i.id}`,
+            time: i.created
+          });
+        });
+    }
+
+    // 4. Arrivals today
+    if (includeHotel) {
+      this.getReservations()
+        .filter(r => r.i === T && (r.st === 'Confirmed' || r.st === 'Pending'))
+        .forEach(r => {
+          items.push({
+            id: 'notif-arr-' + r.c,
+            type: 'arrival',
+            title: `Arrival Today: ${r.g}`,
+            desc: `${r.t} (Room ${r.n}) · ${r.p}`,
+            url: `${base}reservations.html?code=${r.c}`,
+            time: 'Today'
+          });
+        });
+    }
+
+    // 5. Urgent dirty rooms
+    if (includeHotel) {
+      const hk = this.getHK();
+      Object.entries(hk).forEach(([room, h]) => {
+        if (h.s !== 'Clean' && h.p === 'Urgent') {
+          items.push({
+            id: 'notif-hk-' + room,
+            type: 'housekeeping',
+            title: `Urgent Cleaning: Room ${room}`,
+            desc: 'Needs turnover for arriving guest',
+            url: `${base}housekeeping.html`,
+            time: 'Urgent'
+          });
+        }
+      });
+    }
+
+    // 6. Urgent maintenance
+    if (includeHotel) {
+      this.getMaintenance()
+        .filter(x => x.status === 'Open' && x.priority === 'Urgent')
+        .forEach(x => {
+          items.push({
+            id: 'notif-m-' + x.id,
+            type: 'maintenance',
+            title: `Urgent Maintenance: Room ${x.room}`,
+            desc: x.issue,
+            url: `${base}maintenance.html?id=${x.id}`,
+            time: x.created
+          });
+        });
+    }
+
+    // 7. New restaurant orders (POS & In-room)
+    if (includeRest) {
+      this.getOrders()
+        .filter(o => o.status === 'New')
+        .forEach(o => {
+          items.push({
+            id: 'notif-ord-' + o.code,
+            type: 'order',
+            title: `New Order ${o.code}`,
+            desc: `${o.type} · ${o.target}`,
+            url: `${base}orders.html?code=${o.code}`,
+            time: o.created
+          });
+        });
+
+      // 8. Table reservations today
+      const tableBookings = store.get('tableReservations', []);
+      tableBookings
+        .filter(tb => tb.date === T && tb.status === 'Confirmed')
+        .forEach(tb => {
+          items.push({
+            id: 'notif-tbl-' + (tb.code || tb.id),
+            type: 'table',
+            title: `Table Booking: ${tb.guestName || tb.name}`,
+            desc: `${tb.area || 'Dining'} (${tb.partySize || 2} pax) at ${tb.time}`,
+            url: `${base}tables.html`,
+            time: tb.time || 'Today'
+          });
+        });
+    }
+
+    // 9. Superadmin Pending Approvals
+    if (portal === 'management') {
+      const pendingApprovals = store.get('approvalRequests', []).filter(a => a.status === 'Pending');
+      pendingApprovals.forEach(ap => {
+        items.push({
+          id: 'notif-apr-' + ap.id,
+          type: 'approval',
+          title: `Pending Approval: ${ap.action}`,
+          desc: `${ap.requestedBy || 'Staff'} · ${ap.reason || ''}`,
+          url: `${base}approvals.html`,
+          time: ap.created || 'Pending'
+        });
+      });
+    }
+
+    return items;
+  },
+
+  // ─── Guest Self-Service Notifications ───
+  getGuestNotifications(guestSession) {
+    if (!guestSession) return [];
+    const items = [];
+    const guestEmail = (guestSession.email || '').toLowerCase();
+    const guestName = (guestSession.name || '').toLowerCase();
+
+    // 1. Confirmed room reservations
+    const reservations = this.getReservations().filter(r =>
+      (r.em && r.em.toLowerCase() === guestEmail) || (r.g && r.g.toLowerCase() === guestName)
+    );
+    reservations.forEach(r => {
+      items.push({
+        id: 'notif-gst-res-' + r.c,
+        type: 'reservation',
+        title: `Reservation ${r.c} (${r.st})`,
+        desc: `${r.t} · ${fmtDate(r.i)} to ${fmtDate(r.o)}`,
+        url: 'guest-portal.html#reservations',
+        time: fmtDate(r.i)
+      });
+    });
+
+    // 2. Active food orders
+    const orders = this.getOrders().filter(o =>
+      (o.guestEmail && o.guestEmail.toLowerCase() === guestEmail) ||
+      (o.room && reservations.some(r => String(r.n) === String(o.room)))
+    );
+    orders.filter(o => o.status !== 'Cancelled').forEach(o => {
+      items.push({
+        id: 'notif-gst-ord-' + o.code,
+        type: 'order',
+        title: `Dining Order ${o.code}: ${o.status}`,
+        desc: `${(o.lines || []).map(l => l.name).join(', ')}`,
+        url: 'guest-portal.html#orders',
+        time: o.created || 'Today'
+      });
+    });
+
+    // 3. Staff replies in messaging
+    this.getThreads().filter(t => (t.guestEmail || '').toLowerCase() === guestEmail).forEach(t => {
+      if (t.messages && t.messages.some(m => m.role === 'staff')) {
+        const lastStaffMsg = [...t.messages].reverse().find(m => m.role === 'staff');
+        items.push({
+          id: 'notif-gst-msg-' + t.id,
           type: 'message',
-          title: `Message from ${t.guestName}`,
-          desc: t.subject,
-          url: '../management/messages.html?id=' + t.id,
-          time: t.updated
-        });
-      });
-
-    // 2. New contact inquiries
-    this.getInquiries()
-      .filter(i => i.status === 'New')
-      .forEach(i => {
-        items.push({
-          id: 'notif-' + (i.ref || i.id),
-          type: 'inquiry',
-          title: `New Inquiry: ${i.name}`,
-          desc: i.type,
-          url: '../management/inquiries.html?ref=' + (i.ref || i.id),
-          time: i.created
-        });
-      });
-
-    // 3. Arrivals today
-    this.getReservations()
-      .filter(r => r.i === T && (r.st === 'Confirmed' || r.st === 'Pending'))
-      .forEach(r => {
-        items.push({
-          id: 'notif-arr-' + r.c,
-          type: 'arrival',
-          title: `Arrival Today: ${r.g}`,
-          desc: `${r.t} (Room ${r.n}) · ${r.p}`,
-          url: '../management/reservations.html?code=' + r.c,
-          time: 'Today'
-        });
-      });
-
-    // 4. Urgent dirty rooms
-    const hk = this.getHK();
-    Object.entries(hk).forEach(([room, h]) => {
-      if (h.s !== 'Clean' && h.p === 'Urgent') {
-        items.push({
-          id: 'notif-hk-' + room,
-          type: 'housekeeping',
-          title: `Urgent Cleaning: Room ${room}`,
-          desc: 'Needs turnover for arriving guest',
-          url: '../management/housekeeping.html',
-          time: 'Urgent'
+          title: `Reply from Concierge: ${t.subject}`,
+          desc: lastStaffMsg ? lastStaffMsg.text : 'New message from staff',
+          url: 'guest-portal.html#messages',
+          time: t.updated || 'Recent'
         });
       }
     });
-
-    // 5. Urgent maintenance
-    this.getMaintenance()
-      .filter(x => x.status === 'Open' && x.priority === 'Urgent')
-      .forEach(x => {
-        items.push({
-          id: 'notif-m-' + x.id,
-          type: 'maintenance',
-          title: `Urgent Maintenance: Room ${x.room}`,
-          desc: x.issue,
-          url: '../management/maintenance.html?id=' + x.id,
-          time: x.created
-        });
-      });
-
-    // 6. New restaurant orders
-    this.getOrders()
-      .filter(o => o.status === 'New')
-      .forEach(o => {
-        items.push({
-          id: 'notif-ord-' + o.code,
-          type: 'order',
-          title: `New Order ${o.code}`,
-          desc: `${o.type} · ${o.target}`,
-          url: '../management/orders.html?code=' + o.code,
-          time: o.created
-        });
-      });
 
     return items;
   }
@@ -2622,7 +2962,7 @@ Data.init();
 
 // Cross-Tab Reactivity Listener
 if (typeof window !== 'undefined' && window.addEventListener) {
-  window.addEventListener('storage', function(e) {
+  window.addEventListener('storage', function (e) {
     if (e.key && e.key.startsWith('pupsj.')) {
       const entity = e.key.replace('pupsj.', '');
       window.dispatchEvent(new CustomEvent('pupsj:data-change', {

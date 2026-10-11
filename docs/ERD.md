@@ -62,8 +62,47 @@ erDiagram
         string source
         int nightlyRate
         int grossTotal
-        string holdExpiresAt
+        int depositPct
+        int depositRequired
+        int depositPaid
+        int balanceDue
+        string holdId FK
+        string paymentIntentId FK
+        string confirmedAt
+        string confirmedBy
         string created
+    }
+
+    BOOKING_HOLD {
+        string holdId PK
+        string guestId FK
+        string typeId FK
+        string checkIn
+        string checkOut
+        int guests
+        string promoCode
+        string status
+        int createdAt
+        int expiresAt
+        string method
+        int attempts
+        string paymentIntentId FK
+    }
+
+    PAYMENT_INTENT {
+        string intentId PK
+        string holdId FK
+        int amount
+        string method
+        string status
+        string failureReason
+        string cardBrand
+        string cardLast4
+        string bankName
+        string bankRef
+        string authRef
+        int createdAt
+        int settledAt
     }
 
     FOLIO_PAYMENT {
@@ -163,6 +202,9 @@ erDiagram
     ROOM_TYPE ||--o{ ROOM : classifies
     ROOM ||--o{ RESERVATION : accommodates
     GUEST_ACCOUNT ||--o{ RESERVATION : books
+    GUEST_ACCOUNT ||--o{ BOOKING_HOLD : initiates
+    BOOKING_HOLD ||--o| RESERVATION : finalizes_into
+    BOOKING_HOLD ||--o{ PAYMENT_INTENT : creates
     RESERVATION ||--o{ FOLIO_PAYMENT : settles
     RESERVATION ||--o{ FOLIO_CHARGE : accrues
     RESERVATION ||--o{ DINING_ORDER : charges_to_room
@@ -192,12 +234,20 @@ Stores all front-desk and web reservation transactions.
 | `co` / `o` / `checkOut` | `DATE` | NN | - | - | ISO-8601 `YYYY-MM-DD`. Must be $>$ `checkIn`. |
 | `nights` | `INT` | NN | - | `1` | Computed night duration: $\text{dateDiff}(ci, co)$. |
 | `guests` | `INT` | NN | - | `2` | Number of occupants. Must be $\le \text{RoomType.capacity}$. |
-| `s` / `st` / `status` | `VARCHAR(20)` | NN | - | `'Pending'`| Lifecycle state: `Pending`, `Confirmed`, `Checked-in`, `Checked-out`, `Cancelled`, `No-show`. |
-| `source` | `VARCHAR(20)` | NN | - | `'Web'` | Booking origin: `Web`, `Walk-in`, `Staff-assisted`, `OTA`. |
-| `rt` / `nightlyRate` | `INT` | NN | - | - | Philippine Peso integer rate per night. |
+| `s` / `st` / `status` | `VARCHAR(20)` | NN | - | `'Confirmed'`| Lifecycle state: `Confirmed`, `Checked-in`, `Checked-out`, `Cancelled`, `No-show` (`Pending` only for staff desk). |
+| `source` | `VARCHAR(20)` | NN | - | `'Online'` | Booking origin: `Online`, `Walk-in`, `Staff-assisted`. |
+| `rt` / `nightlyRate` | `INT` | NN | - | - | Philippine Peso integer rate per night snapshot. |
 | `total` / `grossTotal` | `INT` | NN | - | - | Gross accommodation total inclusive of VAT and Service Charge. |
+| `depositPct` | `INT` | NN | - | `50` | Snapshot percentage required as down payment (default 50). |
+| `depositRequired` | `NUMERIC(10,2)` | NN | - | - | Calculated 50% deposit amount rounded up to centavos (`Money.ceilCentavo`). |
+| `depositPaid` | `NUMERIC(10,2)` | NN | - | `0` | Sum of all deposit payments settled. Required $\ge$ `depositRequired` for check-in. |
+| `balanceDue` | `NUMERIC(10,2)` | NN | - | - | Remaining balance to be settled at check-in or online (`total - depositPaid`). |
+| `holdId` | `VARCHAR(16)` | NULL | FK | `""` | Reference to original `BookingHold` (`HLD-#####`). |
+| `paymentIntentId` | `VARCHAR(16)` | NULL | FK | `""` | Reference to successful `PaymentIntent` (`PI-#####`). |
+| `confirmedAt` | `DATETIME` | NULL | - | `nowISO()` | Timestamp when 50% down payment completed. |
+| `confirmedBy` | `VARCHAR(50)` | NN | - | `'System (payment)'` | Confirmer label: `'System (payment)'` or front desk clerk name. |
 | `promo` | `VARCHAR(20)` | NULL | FK | `""` | Applied voucher discount code. |
-| `holdExpiresAt` | `DATETIME` | NULL | - | `NULL` | ISO-8601 timestamp. Active for unconfirmed web bookings (24h default). |
+| `created` | `DATE` | NN | - | `today()` | Creation business date. |
 
 ---
 
@@ -259,3 +309,51 @@ Tracks physical room attributes and real-time operational status.
 | `actorName` | `VARCHAR(100)` | NN | - | - | Name of logged-in user or front-desk clerk. |
 | `prevHash` | `VARCHAR(64)` | NN | - | - | SHA-256 hash of immediately preceding log record. |
 | `hash` | `VARCHAR(64)` | NN | - | - | SHA-256 hash of: `prevHash + timestamp + action + targetId + details`. |
+
+---
+
+### 2.6 Entity: `BOOKING_HOLD` (Temporary Room Inventory Locks)
+Protects room inventory while a guest completes the checkout and down payment flow.
+
+| Attribute Name | Data Type | Nullable | Key | Default | Description & Business Rules |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `holdId` | `VARCHAR(16)` | NN | PK | - | Format `HLD-#####`. Unique inventory reservation lock. |
+| `guestId` | `VARCHAR(120)` | NN | FK | - | Email or ID of the authenticated guest session. |
+| `guestName` | `VARCHAR(100)` | NN | - | - | Name of guest reserving the room. |
+| `phone` | `VARCHAR(20)` | NN | - | - | Contact phone number. |
+| `typeId` | `VARCHAR(50)` | NN | FK | - | Room type locked (`Standard`, `Deluxe`, `Family Suite`, etc.). |
+| `checkIn` | `DATE` | NN | - | - | Arrival date in `YYYY-MM-DD` format. |
+| `checkOut` | `DATE` | NN | - | - | Departure date in `YYYY-MM-DD` format. |
+| `guests` | `INT` | NN | - | `2` | Number of occupants. |
+| `promoCode` | `VARCHAR(20)` | NULL | FK | `""` | Optional voucher code applied to hold. |
+| `quoteSnapshot` | `JSON` | NN | - | - | Immutable freeze of nightly rates, taxes, total, depositDue (50%), and balanceDue. |
+| `status` | `VARCHAR(20)` | NN | - | `'Active'` | State: `Active`, `Paid`, `Expired`, `Cancelled`. |
+| `createdAt` | `BIGINT` | NN | - | `Date.now()` | Epoch millisecond creation timestamp. |
+| `expiresAt` | `BIGINT` | NN | - | - | Epoch expiry timestamp: `createdAt + 15m` (extended to 30m for Bank Transfer). |
+| `method` | `VARCHAR(30)` | NN | - | `'card'` | Chosen payment rail: `card`, `gcash`, `maya`, `bank`. |
+| `attempts` | `INT` | NN | - | `0` | Number of failed payment attempts (max 3 before automatic cancellation). |
+| `paymentIntentId` | `VARCHAR(16)` | NULL | FK | `NULL` | Linked `PaymentIntent` ID (`PI-#####`). |
+
+---
+
+### 2.7 Entity: `PAYMENT_INTENT` (Simulated Payment Gateway Lifecycle)
+Tracks simulated transactions from initiation through webhook settlement.
+
+| Attribute Name | Data Type | Nullable | Key | Default | Description & Business Rules |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `intentId` | `VARCHAR(16)` | NN | PK | - | Format `PI-#####`. Idempotency key per payment attempt. |
+| `holdId` | `VARCHAR(16)` | NN | FK | - | Associated `BookingHold` (`HLD-#####`). |
+| `amount` | `NUMERIC(10,2)` | NN | - | - | Exact 50% deposit amount to settle in PHP. |
+| `method` | `VARCHAR(30)` | NN | - | - | Payment method: `Credit Card`, `GCash`, `Maya`, `Bank Transfer`. |
+| `status` | `VARCHAR(20)` | NN | - | `'Created'` | State: `Created`, `Processing`, `AwaitingBank`, `Succeeded`, `Failed`, `Cancelled`, `Expired`, `Refunded`. |
+| `failureReason` | `VARCHAR(150)` | NULL | - | `""` | Gateway error: `Card declined`, `Insufficient funds`, `Expired card`. |
+| `cardBrand` | `VARCHAR(20)` | NULL | - | `""` | Detected card network: `Visa`, `Mastercard`. |
+| `cardLast4` | `VARCHAR(4)` | NULL | - | `""` | Last 4 digits of simulated card (never full card or CVV). |
+| `bankName` | `VARCHAR(50)` | NULL | - | `""` | Bank selected for QR Ph transfer (`BDO`, `BPI`, `Metrobank`, etc.). |
+| `bankRef` | `VARCHAR(50)` | NULL | - | `""` | Gateway reference code (`PUP-HLD-#####` or bank callback ref). |
+| `authRef` | `VARCHAR(50)` | NULL | - | `""` | Transaction authorization code. |
+| `reservationCode` | `VARCHAR(16)` | NULL | FK | `NULL` | Associated reservation code post-finalization (`HTL-#####`). |
+| `createdAt` | `BIGINT` | NN | - | `Date.now()` | Initiation timestamp. |
+| `callbackAt` | `BIGINT` | NULL | - | `NULL` | Timestamp of incoming bank webhook callback. |
+| `settledAt` | `BIGINT` | NULL | - | `NULL` | Timestamp of successful gateway settlement. |
+

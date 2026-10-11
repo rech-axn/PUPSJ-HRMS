@@ -58,12 +58,20 @@
       .filter(o => (o.created || '').startsWith(T) && o.status !== 'Cancelled')
       .reduce((sum, o) => sum + (o.subtotal || 0), 0);
 
+    // Online bookings last 24h and rooms currently held while paying
+    const onlineBookings24h = res.filter(r => r.source === 'Online' && ((r.confirmedAt || r.created || '').startsWith(T) || r.i === T)).length;
+    const holds = store.get('bookingHolds', []);
+    const roomsHeldWhilePaying = holds.filter(h => h.status === 'Active' && new Date(h.expiresAt).getTime() > Date.now()).length;
+
     // Pending queues counts
     const unpaidDeposits = res.filter(r => r.st === 'Pending' && r.p === 'Unpaid').length;
     const unreadMessages = threads.filter(t => (t.unreadStaff || 0) > 0 && t.status === 'Open').length;
     const newInquiries = inq.filter(i => i.status === 'New').length;
     const urgentCleaning = Object.values(hk).filter(h => h.s !== 'Clean' && h.p === 'Urgent').length;
     const urgentMaint = maint.filter(m => m.status === 'Open' && m.priority === 'Urgent').length;
+
+    const isHotelPortal = window.location.pathname.replace(/\\/g, '/').includes('/hotel/') ||
+      (typeof Data !== 'undefined' && Data.getStaffSession() && Data.getStaffSession().role === 'hotel_receptionist');
 
     root.innerHTML = `
       <!-- Operations Quick Actions Toolbar -->
@@ -72,22 +80,26 @@
           <span class="ic" data-icon="dashboard" style="color: var(--gold-ink); font-size: 20px;">[ICON: dashboard]</span>
           <div>
             <div style="font-weight: 600; font-size: 14px;">Front Desk &amp; Operations Quick Actions</div>
-            <div class="text-xs text-muted">Direct administrative actions across all hotel &amp; restaurant modules</div>
+            <div class="text-xs text-muted">${isHotelPortal ? 'Direct administrative actions across front desk and hotel operations' : 'Direct administrative actions across all hotel &amp; restaurant modules'}</div>
           </div>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <a href="reservations.html?new=1" class="btn btn-sm">
             <span class="ic" data-icon="plus">[ICON: plus]</span> New Reservation
           </a>
+          ${!isHotelPortal ? `
           <a href="orders.html" class="btn btn-sm">
             <span class="ic" data-icon="tray">[ICON: tray]</span> New POS Order
           </a>
+          ` : ''}
           <a href="guests.html" class="btn-secondary btn-sm">
             <span class="ic" data-icon="users">[ICON: users]</span> Register Guest
           </a>
+          ${!isHotelPortal ? `
           <a href="tables.html" class="btn-secondary btn-sm">
             <span class="ic" data-icon="table">[ICON: table]</span> Table Seating
           </a>
+          ` : ''}
           <a href="housekeeping.html" class="btn-secondary btn-sm">
             <span class="ic" data-icon="broom">[ICON: broom]</span> Housekeeping
           </a>
@@ -98,7 +110,7 @@
       </div>
 
       <!-- Top Operational KPI Cards -->
-      <div class="stats-grid">
+      <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
         <div class="stat-card kpi-card">
           <div class="stat-card-label">Arrivals Today</div>
           <div class="stat-card-num">${arrToday.length}</div>
@@ -113,6 +125,16 @@
           <div class="stat-card-label">In-House Guests</div>
           <div class="stat-card-num">${inHouseGuestCount}</div>
           <div class="stat-card-sub">${occupiedCount} rooms occupied (${totalRooms ? Math.round((occupiedCount / totalRooms) * 100) : 0}% occ)</div>
+        </div>
+        <div class="stat-card kpi-card">
+          <div class="stat-card-label">New Online Bookings (24 h)</div>
+          <div class="stat-card-num" style="color: var(--ok);">${onlineBookings24h}</div>
+          <div class="stat-card-sub">Instant ${CONFIG.depositPct}% deposit confirmed</div>
+        </div>
+        <div class="stat-card kpi-card">
+          <div class="stat-card-label">Rooms Held While Paying</div>
+          <div class="stat-card-num" style="color: var(--gold-ink);">${roomsHeldWhilePaying}</div>
+          <div class="stat-card-sub">Active 15–30m inventory holds</div>
         </div>
         <div class="stat-card kpi-card">
           <div class="stat-card-label">Dining Sales Today</div>

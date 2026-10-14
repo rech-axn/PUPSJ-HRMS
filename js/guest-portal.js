@@ -223,10 +223,10 @@
         </div>
         ${activeRes ? `
           <div style="display: flex; gap: 8px;">
-            <button class="btn btn-sm" onclick="switchTab('stay'); setTimeout(() => $('btnGpHousekeeping')?.click(), 200);">
+            <button class="btn btn-sm" onclick="switchTab('stay'); setTimeout(() => $('btnGpHousekeeping')?.click(), 200);" ${activeRes.st === 'Checked-in' ? '' : 'disabled title="Available once checked in"'}>
               <span class="ic" data-icon="plus">[ICON: plus]</span> Housekeeping Request
             </button>
-            <button class="btn-secondary btn-sm" onclick="switchTab('stay'); setTimeout(() => $('btnGpMaintenance')?.click(), 200);">
+            <button class="btn-secondary btn-sm" onclick="switchTab('stay'); setTimeout(() => $('btnGpMaintenance')?.click(), 200);" ${activeRes.st === 'Checked-in' ? '' : 'disabled title="Available once checked in"'}>
               <span class="ic" data-icon="wrench">[ICON: wrench]</span> Report Issue
             </button>
           </div>
@@ -433,14 +433,14 @@
               <button class="btn-secondary btn-sm" id="btnGpHousekeeping" ${isCheckedIn ? '' : 'disabled'}>
                 <span class="ic" data-icon="broom">[ICON: broom]</span> Request Housekeeping
               </button>
-              <button class="btn-secondary btn-sm" id="btnGpMaintenance">
+              <button class="btn-secondary btn-sm" id="btnGpMaintenance" ${isCheckedIn ? '' : 'disabled'}>
                 <span class="ic" data-icon="wrench">[ICON: wrench]</span> Report an Issue
               </button>
               <button class="btn-secondary btn-sm" id="btnGpEditRes" ${isCheckedIn ? 'disabled title="Date modifications locked once checked in"' : ''}>
                 <span class="ic" data-icon="edit">[ICON: edit]</span> Modify Booking
               </button>
             </div>
-            ${!isCheckedIn ? '<div class="text-sm text-muted" style="margin-top: 8px;">In-room dining and housekeeping requests activate upon check-in.</div>' : ''}
+            ${!isCheckedIn ? '<div class="text-sm text-muted" style="margin-top: 8px;">In-room dining, housekeeping, and issue reporting activate upon check-in.</div>' : ''}
           </div>
 
           <!-- Room Wi-Fi Access Card -->
@@ -526,6 +526,10 @@
     const orderBtn = $('btnGpOrderDining');
     if (orderBtn) {
       orderBtn.onclick = () => {
+        if (res.st !== 'Checked-in') {
+          toast('In-room dining activates upon check-in.');
+          return;
+        }
         const menu = Data.getMenu().filter(m => m.available);
         showModal(
           `Order In-Room Dining (Room ${res.n})`,
@@ -601,6 +605,10 @@
     const hkBtn = $('btnGpHousekeeping');
     if (hkBtn) {
       hkBtn.onclick = () => {
+        if (res.st !== 'Checked-in') {
+          toast('Housekeeping requests activate upon check-in.');
+          return;
+        }
         showModal(
           `Request Housekeeping (Room ${res.n})`,
           `
@@ -643,6 +651,10 @@
     const maintBtn = $('btnGpMaintenance');
     if (maintBtn) {
       maintBtn.onclick = () => {
+        if (res.st !== 'Checked-in') {
+          toast('Reporting an issue is available once checked in.');
+          return;
+        }
         showModal(
           `Report a Room Issue (Room ${res.n})`,
           `

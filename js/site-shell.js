@@ -96,7 +96,17 @@
         </div>
       `;
     } else if (staffSession && staffSession.name) {
-      // Staff member is signed in
+      // Staff member is signed in - dynamically route to their respective portal based on role
+      let portalHref = `${pagesPath}management/dashboard.html`;
+      let portalLabel = 'Management Portal';
+      if (staffSession.role === 'hotel_receptionist') {
+        portalHref = `${pagesPath}hotel/dashboard.html`;
+        portalLabel = 'Hotel Front Desk';
+      } else if (staffSession.role === 'restaurant_receptionist') {
+        portalHref = `${pagesPath}restaurant/orders.html`;
+        portalLabel = 'Restaurant POS';
+      }
+
       authSectionHtml = `
         <div class="staff-user-menu" id="publicUserMenu">
           <button class="staff-user-btn" id="publicUserBtn" type="button" aria-haspopup="true" aria-expanded="false">
@@ -108,9 +118,17 @@
             <span class="ic" data-icon="chevron-down">[ICON: chevron-down]</span>
           </button>
           <div class="staff-user-dropdown" id="publicUserDropdown" role="menu">
-            <a href="${pagesPath}management/dashboard.html" role="menuitem">
-              <span class="ic" data-icon="dashboard">[ICON: dashboard]</span> Staff Dashboard
+            <a href="${portalHref}" role="menuitem">
+              <span class="ic" data-icon="dashboard">[ICON: dashboard]</span> Return to ${esc(portalLabel)}
             </a>
+            ${staffSession.role === 'superadmin' ? `
+              <a href="${pagesPath}hotel/dashboard.html" role="menuitem">
+                <span class="ic" data-icon="bed">[ICON: bed]</span> Hotel Front Desk
+              </a>
+              <a href="${pagesPath}restaurant/orders.html" role="menuitem">
+                <span class="ic" data-icon="utensils">[ICON: utensils]</span> Restaurant POS
+              </a>
+            ` : ''}
             <button type="button" id="publicSignOutBtn" role="menuitem">
               <span class="ic" data-icon="logout">[ICON: logout]</span> Sign Out
             </button>

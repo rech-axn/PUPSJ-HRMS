@@ -40,6 +40,10 @@
   if (!staffSession && guestSession && !isAuthPage) {
     window.__PUPSJ_ACCESS_DENIED = true;
     document.addEventListener('DOMContentLoaded', () => {
+      const aside = document.querySelector('aside') || $('staffSidebar');
+      if (aside) aside.style.display = 'none';
+      const topbar = document.querySelector('header') || $('staffTopbar');
+      if (topbar) topbar.style.display = 'none';
       const mainApp = document.querySelector('.staff-content') || document.body;
       if (mainApp) {
         mainApp.innerHTML = `
@@ -89,7 +93,16 @@
 
   if (!isRoleAllowed) {
     window.__PUPSJ_ACCESS_DENIED = true;
+    // Seamlessly auto-redirect staff to their authorized portal so layout never breaks
+    if (homeLink) {
+      window.location.replace(homeLink);
+      return;
+    }
     document.addEventListener('DOMContentLoaded', () => {
+      const aside = document.querySelector('aside') || $('staffSidebar');
+      if (aside) aside.style.display = 'none';
+      const topbar = document.querySelector('header') || $('staffTopbar');
+      if (topbar) topbar.style.display = 'none';
       const mainApp = document.querySelector('.staff-content') || document.body;
       if (mainApp) {
         mainApp.innerHTML = `
@@ -457,7 +470,7 @@
 
 
           <!-- Public Website Shortcut -->
-          <a href="../main/home.html" class="btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; height: 32px;" title="View Customer Website">
+          <a href="../main/home.html" class="btn-secondary btn-sm" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; height: 32px;" title="View Customer Website in New Tab">
             <span class="ic" data-icon="external-link">[ICON: external-link]</span>
             <span>Public Site &rarr;</span>
           </a>

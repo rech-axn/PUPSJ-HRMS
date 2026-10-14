@@ -104,7 +104,11 @@
       return safeNextUrl;
     }
     // 3. Defaults
-    return isStaff ? '../management/dashboard.html' : '../guest/guest-portal.html';
+    if (!isStaff) return '../guest/guest-portal.html';
+    const role = (guestSession && guestSession.role) || '';
+    if (role === 'hotel_receptionist') return '../hotel/dashboard.html';
+    if (role === 'restaurant_receptionist') return '../restaurant/orders.html';
+    return '../management/dashboard.html';
   }
 
   // ─── 1. Sign In Flow (Checks Staff first, then Guests) ───

@@ -1,0 +1,106 @@
+[
+  {
+    "intent": "breakfast",
+    "text": "breakfast buffet cost"
+  },
+  {
+    "intent": "breakfast",
+    "text": "choose plated breakfast"
+  },
+  {
+    "intent": "capacity",
+    "text": "maximum room occupancy"
+  },
+  {
+    "intent": "capacity",
+    "text": "extra guest price"
+  },
+  {
+    "intent": "booking",
+    "text": "book a room online"
+  },
+  {
+    "intent": "booking",
+    "text": "send reservation confirmation email"
+  },
+  {
+    "intent": "checkin",
+    "text": "check in hours"
+  },
+  {
+    "intent": "checkin",
+    "text": "checkout deadline"
+  },
+  {
+    "intent": "payment",
+    "text": "can I pay with debit card"
+  },
+  {
+    "intent": "payment",
+    "text": "qrph payment option"
+  },
+  {
+    "intent": "deposit",
+    "text": "how much deposit"
+  },
+  {
+    "intent": "deposit",
+    "text": "advance discount for downpayment"
+  },
+  {
+    "intent": "accessibility",
+    "text": "wheelchair bathroom"
+  },
+  {
+    "intent": "accessibility",
+    "text": "accessible rooms available"
+  },
+  {
+    "intent": "parking",
+    "text": "parking space for cars"
+  },
+  {
+    "intent": "parking",
+    "text": "parking capacity"
+  },
+  {
+    "intent": "food_policy",
+    "text": "is outside food permitted"
+  },
+  {
+    "intent": "food_policy",
+    "text": "bring outside meals"
+  },
+  {
+    "intent": "requests",
+    "text": "request extra towels"
+  },
+  {
+    "intent": "requests",
+    "text": "special requests availability"
+  },
+  {
+    "intent": "cancellation",
+    "text": "cancel my booking"
+  },
+  {
+    "intent": "cancellation",
+    "text": "change reservation dates"
+  },
+  {
+    "intent": "restaurant",
+    "text": "room service order"
+  },
+  {
+    "intent": "restaurant",
+    "text": "restaurant table request"
+  },
+  {
+    "intent": "discount",
+    "text": "pwd discount eligibility"
+  },
+  {
+    "intent": "discount",
+    "text": "private promo voucher"
+  }
+]

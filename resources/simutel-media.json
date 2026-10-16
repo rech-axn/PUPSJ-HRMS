@@ -1,0 +1,27 @@
+{
+  "rooms": {
+    "standard": [
+      "assets/simutel/standard-room.jpg",
+      "assets/simutel/standard-bathroom.jpeg"
+    ],
+    "deluxe city view": [
+      "assets/simutel/deluxe-city-view-room.jpg",
+      "assets/simutel/deluxe-city-view-bathroom.jpg"
+    ],
+    "family suite": [
+      "assets/simutel/family-suite-room.png",
+      "assets/simutel/family-suite-bathroom.png"
+    ],
+    "executive suite": [
+      "assets/simutel/executive-suite-room.jpg",
+      "assets/simutel/executive-suite-bathroom.jpg"
+    ]
+  },
+  "amenities": {
+    "pool": "assets/simutel/pool.jpg",
+    "dining": "assets/simutel/dining.jpg",
+    "spa": "assets/simutel/spa.jpg",
+    "gym": "assets/simutel/gym.jpg",
+    "club": "assets/simutel/club.jpg"
+  }
+}

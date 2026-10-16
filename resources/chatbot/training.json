@@ -1,0 +1,314 @@
+[
+  {
+    "intent": "breakfast",
+    "text": "breakfast buffet plated food morning"
+  },
+  {
+    "intent": "breakfast",
+    "text": "is breakfast included in booking"
+  },
+  {
+    "intent": "breakfast",
+    "text": "buffet or plated meal breakfast"
+  },
+  {
+    "intent": "breakfast",
+    "text": "add breakfast room booking"
+  },
+  {
+    "intent": "breakfast",
+    "text": "morning meal price buffet"
+  },
+  {
+    "intent": "breakfast",
+    "text": "breakfast guests number portions"
+  },
+  {
+    "intent": "capacity",
+    "text": "room maximum occupancy adults children"
+  },
+  {
+    "intent": "capacity",
+    "text": "how many guests per room"
+  },
+  {
+    "intent": "capacity",
+    "text": "extra person additional charge"
+  },
+  {
+    "intent": "capacity",
+    "text": "maximum pax children adults"
+  },
+  {
+    "intent": "capacity",
+    "text": "four people plus extra guest"
+  },
+  {
+    "intent": "capacity",
+    "text": "room capacity family children"
+  },
+  {
+    "intent": "booking",
+    "text": "make online reservation book room"
+  },
+  {
+    "intent": "booking",
+    "text": "reserve accommodation room type email"
+  },
+  {
+    "intent": "booking",
+    "text": "booking confirmation letter email"
+  },
+  {
+    "intent": "booking",
+    "text": "telephone walk in reservation"
+  },
+  {
+    "intent": "booking",
+    "text": "room number assigned on arrival reservation"
+  },
+  {
+    "intent": "booking",
+    "text": "choose arrival departure dates booking"
+  },
+  {
+    "intent": "checkin",
+    "text": "check in time arrival"
+  },
+  {
+    "intent": "checkin",
+    "text": "checkout time departure"
+  },
+  {
+    "intent": "checkin",
+    "text": "checkin hotel reception"
+  },
+  {
+    "intent": "checkin",
+    "text": "what time check out"
+  },
+  {
+    "intent": "checkin",
+    "text": "arrival front desk checkin"
+  },
+  {
+    "intent": "checkin",
+    "text": "ready room check in"
+  },
+  {
+    "intent": "payment",
+    "text": "pay qr ph debit credit card"
+  },
+  {
+    "intent": "payment",
+    "text": "cash payment receipt"
+  },
+  {
+    "intent": "payment",
+    "text": "paymongo online payment"
+  },
+  {
+    "intent": "payment",
+    "text": "payment methods cards QRPh"
+  },
+  {
+    "intent": "payment",
+    "text": "card checkout pay bill"
+  },
+  {
+    "intent": "payment",
+    "text": "QR ph payment status"
+  },
+  {
+    "intent": "deposit",
+    "text": "deposit downpayment amount"
+  },
+  {
+    "intent": "deposit",
+    "text": "advance payment discount deposit"
+  },
+  {
+    "intent": "deposit",
+    "text": "optional down payment reservation"
+  },
+  {
+    "intent": "deposit",
+    "text": "deposit percentage remaining balance"
+  },
+  {
+    "intent": "deposit",
+    "text": "pay lesser advance booking"
+  },
+  {
+    "intent": "deposit",
+    "text": "downpayment before arrival"
+  },
+  {
+    "intent": "accessibility",
+    "text": "wheelchair accessible rooms bathrooms"
+  },
+  {
+    "intent": "accessibility",
+    "text": "accessible bathroom features"
+  },
+  {
+    "intent": "accessibility",
+    "text": "disabled access wheelchair room"
+  },
+  {
+    "intent": "accessibility",
+    "text": "step free accessibility"
+  },
+  {
+    "intent": "accessibility",
+    "text": "bathroom wheelchair accessible"
+  },
+  {
+    "intent": "accessibility",
+    "text": "mobility access room features"
+  },
+  {
+    "intent": "parking",
+    "text": "car parking spaces capacity"
+  },
+  {
+    "intent": "parking",
+    "text": "parking garage availability"
+  },
+  {
+    "intent": "parking",
+    "text": "where park car"
+  },
+  {
+    "intent": "parking",
+    "text": "parking slots vehicles"
+  },
+  {
+    "intent": "parking",
+    "text": "vehicle parking area"
+  },
+  {
+    "intent": "parking",
+    "text": "available car spaces"
+  },
+  {
+    "intent": "food_policy",
+    "text": "outside food policy"
+  },
+  {
+    "intent": "food_policy",
+    "text": "bring outside food"
+  },
+  {
+    "intent": "food_policy",
+    "text": "food from outside allowed"
+  },
+  {
+    "intent": "food_policy",
+    "text": "external food permitted"
+  },
+  {
+    "intent": "food_policy",
+    "text": "bring own meals outside"
+  },
+  {
+    "intent": "food_policy",
+    "text": "outside snacks restriction"
+  },
+  {
+    "intent": "requests",
+    "text": "special request subject availability"
+  },
+  {
+    "intent": "requests",
+    "text": "extra towels request"
+  },
+  {
+    "intent": "requests",
+    "text": "guest concern assistance"
+  },
+  {
+    "intent": "requests",
+    "text": "housekeeping cleaning request"
+  },
+  {
+    "intent": "requests",
+    "text": "send request staff"
+  },
+  {
+    "intent": "requests",
+    "text": "complaint guest issue resolution"
+  },
+  {
+    "intent": "cancellation",
+    "text": "cancel reservation refund policy"
+  },
+  {
+    "intent": "cancellation",
+    "text": "change dates reservation"
+  },
+  {
+    "intent": "cancellation",
+    "text": "modify booking arrival dates"
+  },
+  {
+    "intent": "cancellation",
+    "text": "cancellation fees refund"
+  },
+  {
+    "intent": "cancellation",
+    "text": "cancel stay before arrival"
+  },
+  {
+    "intent": "cancellation",
+    "text": "reschedule booking dates"
+  },
+  {
+    "intent": "restaurant",
+    "text": "restaurant dining order menu"
+  },
+  {
+    "intent": "restaurant",
+    "text": "room service delivery"
+  },
+  {
+    "intent": "restaurant",
+    "text": "order food restaurant staff"
+  },
+  {
+    "intent": "restaurant",
+    "text": "table dining restaurant"
+  },
+  {
+    "intent": "restaurant",
+    "text": "charge restaurant order room folio"
+  },
+  {
+    "intent": "restaurant",
+    "text": "restaurant inquiry transfer"
+  },
+  {
+    "intent": "discount",
+    "text": "promo discount voucher code"
+  },
+  {
+    "intent": "discount",
+    "text": "senior citizen PWD discount"
+  },
+  {
+    "intent": "discount",
+    "text": "promotion valid dates offers"
+  },
+  {
+    "intent": "discount",
+    "text": "private promo code discount"
+  },
+  {
+    "intent": "discount",
+    "text": "public promotion marketing offer"
+  },
+  {
+    "intent": "discount",
+    "text": "senior PWD eligibility verification"
+  }
+]

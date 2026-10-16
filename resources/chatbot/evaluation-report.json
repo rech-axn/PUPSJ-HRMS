@@ -1,0 +1,217 @@
+{
+    "training_samples": 78,
+    "evaluation_samples": 26,
+    "correct": 24,
+    "accuracy": 0.9230769230769231,
+    "note": "Small authored seed dataset; not an independently validated benchmark.",
+    "results": [
+        {
+            "intent": "breakfast",
+            "text": "breakfast buffet cost",
+            "prediction": {
+                "intent": "breakfast",
+                "confidence": 0.9539
+            }
+        },
+        {
+            "intent": "breakfast",
+            "text": "choose plated breakfast",
+            "prediction": {
+                "intent": "breakfast",
+                "confidence": 0.9158
+            }
+        },
+        {
+            "intent": "capacity",
+            "text": "maximum room occupancy",
+            "prediction": {
+                "intent": "capacity",
+                "confidence": 0.9137
+            }
+        },
+        {
+            "intent": "capacity",
+            "text": "extra guest price",
+            "prediction": {
+                "intent": "requests",
+                "confidence": 0.488
+            }
+        },
+        {
+            "intent": "booking",
+            "text": "book a room online",
+            "prediction": {
+                "intent": "booking",
+                "confidence": 0.8306
+            }
+        },
+        {
+            "intent": "booking",
+            "text": "send reservation confirmation email",
+            "prediction": {
+                "intent": "booking",
+                "confidence": 0.9328
+            }
+        },
+        {
+            "intent": "checkin",
+            "text": "check in hours",
+            "prediction": {
+                "intent": "checkin",
+                "confidence": 0.604
+            }
+        },
+        {
+            "intent": "checkin",
+            "text": "checkout deadline",
+            "prediction": {
+                "intent": "fallback",
+                "confidence": 0.3785
+            }
+        },
+        {
+            "intent": "payment",
+            "text": "can I pay with debit card",
+            "prediction": {
+                "intent": "payment",
+                "confidence": 0.9583
+            }
+        },
+        {
+            "intent": "payment",
+            "text": "qrph payment option",
+            "prediction": {
+                "intent": "payment",
+                "confidence": 0.7997
+            }
+        },
+        {
+            "intent": "deposit",
+            "text": "how much deposit",
+            "prediction": {
+                "intent": "deposit",
+                "confidence": 0.5208
+            }
+        },
+        {
+            "intent": "deposit",
+            "text": "advance discount for downpayment",
+            "prediction": {
+                "intent": "deposit",
+                "confidence": 0.9465
+            }
+        },
+        {
+            "intent": "accessibility",
+            "text": "wheelchair bathroom",
+            "prediction": {
+                "intent": "accessibility",
+                "confidence": 0.9102
+            }
+        },
+        {
+            "intent": "accessibility",
+            "text": "accessible rooms available",
+            "prediction": {
+                "intent": "accessibility",
+                "confidence": 0.8048
+            }
+        },
+        {
+            "intent": "parking",
+            "text": "parking space for cars",
+            "prediction": {
+                "intent": "parking",
+                "confidence": 0.5997
+            }
+        },
+        {
+            "intent": "parking",
+            "text": "parking capacity",
+            "prediction": {
+                "intent": "parking",
+                "confidence": 0.8589
+            }
+        },
+        {
+            "intent": "food_policy",
+            "text": "is outside food permitted",
+            "prediction": {
+                "intent": "food_policy",
+                "confidence": 0.9903
+            }
+        },
+        {
+            "intent": "food_policy",
+            "text": "bring outside meals",
+            "prediction": {
+                "intent": "food_policy",
+                "confidence": 0.9887
+            }
+        },
+        {
+            "intent": "requests",
+            "text": "request extra towels",
+            "prediction": {
+                "intent": "requests",
+                "confidence": 0.9619
+            }
+        },
+        {
+            "intent": "requests",
+            "text": "special requests availability",
+            "prediction": {
+                "intent": "requests",
+                "confidence": 0.6207
+            }
+        },
+        {
+            "intent": "cancellation",
+            "text": "cancel my booking",
+            "prediction": {
+                "intent": "cancellation",
+                "confidence": 0.7367
+            }
+        },
+        {
+            "intent": "cancellation",
+            "text": "change reservation dates",
+            "prediction": {
+                "intent": "cancellation",
+                "confidence": 0.8997
+            }
+        },
+        {
+            "intent": "restaurant",
+            "text": "room service order",
+            "prediction": {
+                "intent": "restaurant",
+                "confidence": 0.9244
+            }
+        },
+        {
+            "intent": "restaurant",
+            "text": "restaurant table request",
+            "prediction": {
+                "intent": "restaurant",
+                "confidence": 0.7803
+            }
+        },
+        {
+            "intent": "discount",
+            "text": "pwd discount eligibility",
+            "prediction": {
+                "intent": "discount",
+                "confidence": 0.9708
+            }
+        },
+        {
+            "intent": "discount",
+            "text": "private promo voucher",
+            "prediction": {
+                "intent": "discount",
+                "confidence": 0.9445
+            }
+        }
+    ]
+}

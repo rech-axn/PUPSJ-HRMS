@@ -38,8 +38,8 @@ class RecommendationsTest extends TestCase {
  public function test_guest_discount_requires_staff_verification():void{
   $member=User::factory()->create(['guest_id'=>$this->guest->id,'role'=>'guest']);$this->actingAs($member)->postJson('/api/reservations',$this->values(['discount_category'=>'PWD','discount_verification'=>'self']))->assertUnprocessable();
  }
- public function test_cash_deposit_awards_advance_discount_once():void{
-  Setting::create(['key'=>'training_policy','value'=>[...TrainingPolicy::defaults(),'advance_discount_percent'=>10]]);$r=$this->book();$v=['reference'=>(string)Str::uuid(),'posting_location'=>'Hotel','allocations'=>[['reservation_id'=>$r['id'],'amount'=>500]]];$this->postJson('/api/payments/batch',$v)->assertOk();$this->postJson('/api/payments/batch',$v)->assertOk();$this->assertEquals(900,Reservation::find($r['id'])->amount);
+ public function test_cash_deposit_does_not_award_full_advance_benefit():void{
+  Setting::create(['key'=>'training_policy','value'=>[...TrainingPolicy::defaults(),'advance_discount_percent'=>10]]);$r=$this->book();$v=['reference'=>(string)Str::uuid(),'posting_location'=>'Hotel','allocations'=>[['reservation_id'=>$r['id'],'amount'=>500]]];$this->postJson('/api/payments/batch',$v)->assertOk();$this->postJson('/api/payments/batch',$v)->assertOk();$this->assertEquals(1000,Reservation::find($r['id'])->amount);
  }
  public function test_edit_and_void_only_unposted_restaurant_order():void{
   $m=MenuItem::create(['name'=>'Tea','category'=>'Drink','price'=>50]);$o=$this->postJson('/api/orders',['items'=>[['menu_item_id'=>$m->id,'quantity'=>2]]])->assertCreated()->json();$this->putJson('/api/orders/'.$o['id'],['items'=>[['menu_item_id'=>$m->id,'quantity'=>1]],'reason'=>'Remove extra item'])->assertOk()->assertJsonPath('amount',50);$this->postJson('/api/orders/'.$o['id'].'/void',['reason'=>'Guest cancelled'])->assertOk();$this->putJson('/api/orders/'.$o['id'],['items'=>[['menu_item_id'=>$m->id,'quantity'=>1]],'reason'=>'Invalid'])->assertUnprocessable();

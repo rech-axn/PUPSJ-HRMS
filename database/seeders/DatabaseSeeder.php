@@ -15,5 +15,8 @@ class DatabaseSeeder extends Seeder {
   }
   for($i=1;$i<=8;$i++)\App\Models\DiningTable::firstOrCreate(['label'=>'Table '.$i],['capacity'=>4]);
   foreach([['Chicken Adobo','Main Course',240],['Grilled Fish','Main Course',280],['Vegetable Rice','Rice',120],['Iced Tea','Beverage',60]] as [$name,$category,$price])MenuItem::firstOrCreate(['name'=>$name],compact('category','price'));
+  $this->call(RestoredMenuSeeder::class);
+  $this->call(OperationalRecommendationsSeeder::class);
  }
 }
+

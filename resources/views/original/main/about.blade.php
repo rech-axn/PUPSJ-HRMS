@@ -20,8 +20,8 @@
   </header>
 
   <!-- Page Header -->
-  <header class="site-section" style="background-color: var(--surface); border-bottom: 1px solid var(--line); padding: var(--s6) 0;">
-    <div class="site-container" style="text-align: center; max-width: 760px;">
+  <header class="site-section page-intro">
+    <div class="site-container">
       <span class="site-section-tag">OUR STORY &amp; VALUES</span>
       <h1>About PUPSJ Hotel &amp; Restaurant</h1>
       <p style="margin-top: 12px;">

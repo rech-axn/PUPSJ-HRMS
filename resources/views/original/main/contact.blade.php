@@ -13,15 +13,15 @@
 <script type="application/json" id="original-bootstrap">{!! json_encode($originalBootstrap, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
 @vite(['resources/css/app.css', 'resources/js/original/main/contact.js'])
 </head>
-<body>
+<body class="contact-page">
   <!-- Public Top Navigation -->
   <header class="site-header">
     <nav id="siteNav"></nav>
   </header>
 
   <!-- Page Header -->
-  <header class="site-section" style="background-color: var(--surface); border-bottom: 1px solid var(--line); padding: var(--s6) 0;">
-    <div class="site-container" style="text-align: center; max-width: 760px;">
+  <header class="site-section page-intro">
+    <div class="site-container">
       <span class="site-section-tag">COMMUNICATIONS &amp; FRONT DESK</span>
       <h1>Contact PUPSJ Hotel &amp; Restaurant</h1>
       <p style="margin-top: 12px;">
@@ -139,3 +139,4 @@
   
 </body>
 </html>
+

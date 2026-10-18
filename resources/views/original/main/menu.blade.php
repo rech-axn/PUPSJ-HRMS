@@ -20,8 +20,8 @@
   </header>
 
   <!-- Hero / Introduction -->
-  <header class="site-section" style="background-color: var(--surface); border-bottom: 1px solid var(--line); padding: var(--s6) 0;">
-    <div class="site-container" style="text-align: center; max-width: 760px;">
+  <header class="site-section page-intro">
+    <div class="site-container">
       <span class="site-section-tag">DINING &amp; GASTRONOMY</span>
       <h1>PUPSJ Restaurant &amp; Lounge</h1>
       <p style="margin: 12px 0 20px;">
@@ -167,3 +167,4 @@
   
 </body>
 </html>
+

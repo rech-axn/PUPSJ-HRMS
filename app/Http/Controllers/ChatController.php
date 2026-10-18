@@ -6,13 +6,13 @@ use App\Models\RoomType;
 class ChatController extends Controller {
  public function answer(Request $q){$v=$q->validate(['message'=>'required|string|min:2|max:500']);$result=IntentClassifier::predict($v['message']);$p=TrainingPolicy::get();
   $answer=match($result['intent']){
-   'breakfast'=>'Breakfast may be None, Buffet or Plated. Buffet: PHP '.number_format($p['breakfast_buffet_rate'],2).'; plated: PHP '.number_format($p['breakfast_plated_rate'],2).' per selected guest per night. Choose the number of breakfasts when booking.',
+   'breakfast'=>'Booking breakfast is a buffet at PHP '.number_format($p['breakfast_buffet_rate'],2).' per selected guest per night. Selection: '.implode('; ',$p['buffet_inclusions']).'. Plated in-room meals are separate restaurant orders charged at menu prices.',
    'capacity'=>'Choose adults and children separately. Each room type shows included capacity, maximum extra guests and the extra-person rate. Children count toward occupancy.',
    'booking'=>'Choose stay dates and a room type, sign in, enter booking details and confirm. A room number is assigned by Hotel Staff at check-in. An email address is required for every booking channel.',
    'checkin'=>'Check-in starts at 2:00 PM and checkout is by 12:00 PM under the training policy. Hotel Staff verify your reservation and assign a ready room.',
    'payment'=>'Payments may be recorded as cash by authorized staff or made through PayMongo test checkout using QR Ph or debit/credit card. This is a training system; no live payments are enabled.',
-   'deposit'=>'A deposit is optional. The configured deposit is '.$p['deposit_percent'].'% of the booking total. An advance-payment discount is '.$p['advance_discount_percent'].'% under the configured training policy. The remaining balance is shown on your folio.',
-   'accessibility'=>'Accessible room and bathroom features are listed for each room type. Ask Hotel Staff to confirm the features needed before booking.',
+   'deposit'=>'A deposit is optional. The configured deposit is '.$p['deposit_percent'].'% of the booking total. A '.$p['advance_discount_percent'].'% accommodation benefit requires full payment at least '.$p['advance_min_days'].' days before arrival; a deposit alone does not qualify. Discounts do not stack. The remaining balance is shown on your folio.',
+   'accessibility'=>'Select the accessible room and bathroom requirement when booking. Designated training rooms are on floors 1–2; availability is checked and Hotel Staff assign an appropriate room at check-in. This is simulated accessibility information.',
    'parking'=>'The configured parking capacity is '.$p['parking_spaces'].' spaces. Spaces are subject to availability and are not guaranteed by a room reservation.',
    'food_policy'=>$p['outside_food_allowed']?'Outside food is allowed under the configured property policy.':'Outside food is not permitted under the configured property policy.',
    'requests'=>'Use Guest Requests to send a request to Hotel or Restaurant Staff. Special requests are subject to availability and confirmation.',

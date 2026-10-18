@@ -10,6 +10,7 @@ Route::post('/api/original/auxiliary',[\App\Http\Controllers\OriginalController:
 Route::delete('/api/original/directory/{kind}/{id}',[\App\Http\Controllers\OriginalController::class,'remove'])->middleware('auth');
 Route::get('/login',fn()=>redirect(url('/pages/auth/login.html')))->name('login');
 Route::get('/rooms',fn()=>redirect(url('/pages/rooms/rooms-deals.html')));
+Route::get('/booking',fn()=>view('booking',['originalBootstrap'=>\App\Services\OriginalSnapshot::make(auth()->user())]))->name('booking');
 Route::get('/menu',fn()=>redirect(url('/pages/main/menu.html')));
 Route::get('/reset-password/{token}',fn(string $token)=>view('reset',['token'=>$token]))->name('password.reset');
 Route::post('/api/forgot-password',[\App\Http\Controllers\PasswordController::class,'forgot'])->middleware('throttle:5,1');
@@ -83,6 +84,10 @@ Route::middleware('auth')->group(function(){
   Route::put('/api/requests/{id}',[Rec::class,'resolve']);
   Route::post('/api/closing',[Rec::class,'closing']);
   Route::get('/api/business-dates',[Rec::class,'businessDates']);
+  Route::match(['get','post'],'/api/bills/{type}/{id}/acknowledgment',[\App\Http\Controllers\OperationalRecommendationsController::class,'acknowledge']);
+  Route::match(['get','post'],'/api/promotions',[\App\Http\Controllers\OperationalRecommendationsController::class,'promotions']);
+  Route::get('/api/department-audit',[\App\Http\Controllers\OperationalRecommendationsController::class,'auditSummary']);
+  Route::get('/api/payment-setup',[\App\Http\Controllers\OperationalRecommendationsController::class,'paymentStatus']);
   Route::match(['get','post'],'/api/policy',[Rec::class,'policy'])->middleware(RoleAccess::class.':admin');
   Route::match(['get','post'],'/api/settings',[Directory::class,'settings'])->middleware(RoleAccess::class.':admin');
  });

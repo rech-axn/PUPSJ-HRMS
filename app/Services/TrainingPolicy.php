@@ -9,6 +9,7 @@ class TrainingPolicy {
   'breakfast_buffet_rate'=>0,'breakfast_plated_rate'=>0,'deposit_percent'=>50,
   'advance_discount_percent'=>0,'senior_discount_percent'=>0,'pwd_discount_percent'=>0,
   'local_tax_percent'=>0,'parking_spaces'=>0,'outside_food_allowed'=>false,
+  'advance_min_days'=>7,'require_bill_acknowledgment'=>false,'buffet_inclusions'=>[],
   'confirmation_reminders'=>'Check-in from 2:00 PM; checkout by 12:00 PM. Special requests are subject to availability and confirmation.',
   'promos'=>[],
  ];}
@@ -19,14 +20,13 @@ class TrainingPolicy {
   if($count>$type->capacity+$type->extra_capacity)HotelService::fail('Party exceeds this room type capacity, including permitted extra guests.');
   $room=self::cents($type->rate)*$nights;
   $extra=max(0,$count-$type->capacity)*self::cents($type->extra_person_rate)*$nights;
-  $breakfast=$v['breakfast']??'None';$pax=(int)($v['breakfast_pax']??0);
+  $breakfast=$v['breakfast']??'None';if(!in_array($breakfast,['None','Buffet']))HotelService::fail('Booking breakfast is buffet only. Plated meals are separate restaurant or in-room dining orders.');$pax=(int)($v['breakfast_pax']??0);
   if($pax>$count||($breakfast==='None'&&$pax>0)||($breakfast!=='None'&&$pax<1))HotelService::fail('Choose a valid breakfast guest count.');
   $food=self::cents($p['breakfast_'.strtolower($breakfast).'_rate']??0)*$pax*$nights;
   $category=$v['discount_category']??'None';$percent=0;$promo=null;
   if($category!=='None')$percent=(float)$p[strtolower($category).'_discount_percent'];
   if(!empty($v['promo_code'])){
-   foreach($p['promos'] as $offer)if(strcasecmp($offer['code'],$v['promo_code'])===0 && $offer['start']<=today()->toDateString() && $offer['end']>=today()->toDateString())$promo=$offer;
-   if(!$promo)HotelService::fail('Promo is invalid or outside its dates.');
+   $promo=PromotionService::resolve($v['promo_code'],$v);
    if($category!=='None')HotelService::fail('Select one verified discount or promotion; discounts do not stack.');
    $percent=(float)$promo['percent'];
   }
@@ -34,6 +34,9 @@ class TrainingPolicy {
   $services=0;$selected=[];foreach(($v['services']??[]) as $item){$offer=collect(Setting::where('key','booking_services')->first()?->value??[])->first(fn($s)=>(string)$s['id']===(string)$item['id']&&($s['active']??true));if(!$offer)HotelService::fail('A selected service is no longer available.');$amount=self::cents($offer['price'])*(int)$item['quantity']*$nights;$services+=$amount;$selected[]=['id'=>$offer['id'],'name'=>$offer['name'],'quantity'=>(int)$item['quantity'],'unit_price'=>(float)$offer['price'],'nights'=>$nights,'amount'=>$amount/100];}
   $tax=(int)round(($room+$extra-$discount+$food+$services)*(float)$p['local_tax_percent']/100);
   $total=$room+$extra-$discount+$food+$services+$tax;
-  return ['services'=>$selected,'services_total'=>$services/100,'room'=>$room/100,'extra_guests'=>$extra/100,'breakfast'=>$food/100,'discount'=>$discount/100,'local_tax'=>$tax/100,'local_tax_percent'=>(float)$p['local_tax_percent'],'total'=>$total/100,'deposit_due'=>round($total*$p['deposit_percent']/100)/100,'advance_discount_percent'=>(float)$p['advance_discount_percent'],'advance_discount_awarded'=>0,'rate_snapshot'=>['room_rate'=>(float)$type->rate,'extra_rate'=>(float)$type->extra_person_rate,'breakfast_mode'=>$breakfast]];
+  $advanceEligible=!$discount&&$category==='None'&&($p['advance_discount_percent']??0)>0&&!empty($v['arrival'])&&$v['arrival']>=today()->addDays((int)$p['advance_min_days'])->toDateString();
+  $advancePercent=$advanceEligible?(float)$p['advance_discount_percent']:0;
+  $advanceDiscount=(int)round(($room+$extra)*$advancePercent/100);$advanceTax=(int)round($advanceDiscount*(float)$p['local_tax_percent']/100);
+  return ['services'=>$selected,'services_total'=>$services/100,'room'=>$room/100,'extra_guests'=>$extra/100,'breakfast'=>$food/100,'discount'=>$discount/100,'local_tax'=>$tax/100,'local_tax_percent'=>(float)$p['local_tax_percent'],'total'=>$total/100,'deposit_due'=>round($total*$p['deposit_percent']/100)/100,'advance_discount_percent'=>$advancePercent,'advance_min_days'=>(int)$p['advance_min_days'],'advance_payment_due'=>($total-$advanceDiscount-$advanceTax)/100,'advance_discount_awarded'=>0,'rate_snapshot'=>['room_rate'=>(float)$type->rate,'extra_rate'=>(float)$type->extra_person_rate,'breakfast_mode'=>$breakfast]];
  }
 }

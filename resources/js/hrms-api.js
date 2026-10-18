@@ -1,3 +1,4 @@
+import './recommendation-ui.js';
 window.HRMS={
  base:document.querySelector('meta[name="hrms-base"]').content.replace(/\/$/,''),
  esc:s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),

@@ -11,7 +11,7 @@ class OriginalController extends Controller {
    $valid=$role==='admin'||($area==='guest'&&$role==='guest')||($area==='hotel'&&in_array($role,['frontdesk','housekeeping']))||($area==='restaurant'&&$role==='restaurant');abort_unless($valid,403);
    if($role==='housekeeping')abort_unless(in_array($page,['housekeeping','messages','dashboard']),403);
   }
-  if($area==='rooms'&&$page==='rooms-deals')return view('booking',['originalBootstrap'=>OriginalSnapshot::make($q->user())]);
+  if($area==='rooms'&&$page==='rooms-deals')return view('rooms-showcase',['originalBootstrap'=>OriginalSnapshot::make($q->user())]);
   abort_unless(view()->exists('original.'.$area.'.'.$page),404);
   return view('original.'.$area.'.'.$page,['originalBootstrap'=>OriginalSnapshot::make($q->user())]);
  }

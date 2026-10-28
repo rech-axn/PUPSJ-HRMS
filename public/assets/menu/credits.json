@@ -1,0 +1,377 @@
+[
+  {
+    "id": "MNU-101",
+    "name": "Traditional Filipino Breakfast",
+    "category": "Breakfast",
+    "desc": "Garlic sinangag rice, sunny-side eggs, and homemade beef tapa with pickled papaya.",
+    "price": 420,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Breakfast",
+      "Local Favorite"
+    ],
+    "photo": "assets/menu/ai/01-traditional-filipino-breakfast.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-102",
+    "name": "Brioche French Toast",
+    "category": "Breakfast",
+    "desc": "Thick artisan brioche dipped in vanilla custard, served with honeycomb butter and maple syrup.",
+    "price": 380,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Breakfast",
+      "Sweet"
+    ],
+    "photo": "assets/menu/ai/02-brioche-french-toast.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-103",
+    "name": "Fresh Continental Fruit & Pastry Basket",
+    "category": "Breakfast",
+    "desc": "Seasonal tropical fruits, warm butter croissants, Danish pastries, and guava jam.",
+    "price": 350,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Breakfast",
+      "Light"
+    ],
+    "photo": "assets/menu/ai/03-fresh-continental-fruit-pastry-basket.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-201",
+    "name": "Lumpiang Sariwa (Fresh Spring Rolls)",
+    "category": "Starters",
+    "desc": "Heart of palm and vegetables wrapped in homemade crepe with sweet peanut garlic sauce.",
+    "price": 290,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Starter",
+      "Vegetarian"
+    ],
+    "photo": "assets/menu/ai/04-lumpiang-sariwa-fresh-spring-rolls-v4.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-202",
+    "name": "Crispy Calamari Fritti",
+    "category": "Starters",
+    "desc": "Lightly dusted tender squid with sinamak spiced coconut vinegar and garlic aioli.",
+    "price": 360,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Starter",
+      "Seafood"
+    ],
+    "photo": "assets/menu/ai/05-crispy-calamari-fritti.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-203",
+    "name": "Roasted Wild Mushroom Velouté",
+    "category": "Starters",
+    "desc": "Cream of forest mushrooms finished with truffle oil and herb croutons.",
+    "price": 320,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Starter",
+      "Soup"
+    ],
+    "photo": "assets/menu/ai/06-roasted-wild-mushroom-velouté.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-301",
+    "name": "US Angus Ribeye Steak (250g)",
+    "category": "Mains",
+    "desc": "Char-grilled prime beef served with garlic mashed potatoes, roasted vegetables, and peppercorn jus.",
+    "price": 1450,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Main",
+      "Chef Signature"
+    ],
+    "photo": "assets/menu/ai/07-us-angus-ribeye-steak-250g.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-302",
+    "name": "Crispy Pork Belly Kare-Kare",
+    "category": "Mains",
+    "desc": "Slow-braised pork belly in rich toasted peanut annatto sauce with native vegetables and shrimp paste.",
+    "price": 620,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Main",
+      "Filipino Classic"
+    ],
+    "photo": "assets/menu/ai/08-crispy-pork-belly-kare-kare.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-303",
+    "name": "Sinigang na Salmon Belly sa Miso",
+    "category": "Mains",
+    "desc": "Salmon belly in sour tamarind miso broth with water spinach, radish, and long peppers.",
+    "price": 680,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Main",
+      "Seafood"
+    ],
+    "photo": "assets/menu/ai/09-sinigang-na-salmon-belly-sa-miso.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-304",
+    "name": "Truffle Mushroom Risotto",
+    "category": "Mains",
+    "desc": "Creamy arborio rice with sauteed portobello, parmesan crisps, and white truffle essence.",
+    "price": 580,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Main",
+      "Vegetarian"
+    ],
+    "photo": "assets/menu/ai/10-truffle-mushroom-risotto.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-401",
+    "name": "PUPSJ Halo-Halo Special",
+    "category": "Desserts",
+    "desc": "Shaved ice with candied fruits, ube halaya, leche flan, and artisanal ube gelato.",
+    "price": 280,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Dessert",
+      "Filipino Classic"
+    ],
+    "photo": "assets/menu/ai/11-pupsj-halo-halo-special.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-402",
+    "name": "Mango Tres Leches Cake",
+    "category": "Desserts",
+    "desc": "Sponge cake soaked in three milks, layered with sweet Carabao mango coulis.",
+    "price": 260,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Dessert",
+      "Sweet"
+    ],
+    "photo": "assets/menu/ai/12-mango-tres-leches-cake.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-403",
+    "name": "Warm Batangas Tablea Fondant",
+    "category": "Desserts",
+    "desc": "Molten dark chocolate cake crafted from native cacao tablea with vanilla bean cream.",
+    "price": 310,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Dessert",
+      "Chocolate"
+    ],
+    "photo": "assets/menu/ai/13-warm-batangas-tablea-fondant.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-501",
+    "name": "Fresh Ripe Mango Shake",
+    "category": "Drinks",
+    "desc": "Chilled ripe Philippine mango blended with organic milk.",
+    "price": 180,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Drink",
+      "Fresh"
+    ],
+    "photo": "assets/menu/ai/14-fresh-ripe-mango-shake.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-502",
+    "name": "Calamansi Honey Cooler",
+    "category": "Drinks",
+    "desc": "Freshly pressed local citrus with raw wild honey and fresh mint leaves.",
+    "price": 160,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Drink",
+      "Non-Alcoholic"
+    ],
+    "photo": "assets/menu/ai/15-calamansi-honey-cooler.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-503",
+    "name": "Barista Latte / Cappuccino",
+    "category": "Drinks",
+    "desc": "Locally sourced single-origin Arabica espresso with steamed whole milk.",
+    "price": 170,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Drink",
+      "Coffee"
+    ],
+    "photo": "assets/menu/ai/16-barista-latte-cappuccino.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "id": "MNU-504",
+    "name": "Lemongrass Ginger Iced Tea",
+    "category": "Drinks",
+    "desc": "Fresh brewed native lemongrass and ginger infused with pandan and raw honey.",
+    "price": 160,
+    "available": true,
+    "station": "Kitchen",
+    "tags": [
+      "Drink",
+      "Fresh"
+    ],
+    "photo": "assets/menu/ai/17-lemongrass-ginger-iced-tea.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "name": "Chicken Adobo",
+    "category": "Main Course",
+    "price": 240,
+    "desc": "",
+    "available": true,
+    "photo": "assets/menu/ai/18-chicken-adobo.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "name": "Grilled Fish",
+    "category": "Main Course",
+    "price": 280,
+    "desc": "",
+    "available": true,
+    "photo": "assets/menu/ai/19-grilled-fish.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "name": "Vegetable Rice",
+    "category": "Rice",
+    "price": 120,
+    "desc": "",
+    "available": true,
+    "photo": "assets/menu/ai/20-vegetable-rice.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  },
+  {
+    "name": "Iced Tea",
+    "category": "Beverage",
+    "price": 60,
+    "desc": "",
+    "available": true,
+    "photo": "assets/menu/ai/21-iced-tea.png",
+    "photo_source": null,
+    "photo_credit": "AI-generated",
+    "photo_license": null,
+    "photo_license_url": null,
+    "photo_description": "AI-generated serving suggestion; actual presentation may vary."
+  }
+]

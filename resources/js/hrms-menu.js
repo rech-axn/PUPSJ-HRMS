@@ -1,0 +1,1 @@
+HRMS.api('/api/catalog').then(d=>document.getElementById('menuCatalog').innerHTML=d.menu.map(m=>`<article class="card"><span class="text-muted">${HRMS.esc(m.category)}</span><h2>${HRMS.esc(m.name)}</h2><p>${HRMS.money(m.price)}</p></article>`).join('')).catch(HRMS.error);

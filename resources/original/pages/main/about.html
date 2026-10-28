@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About Us – PUPSJ Hotel &amp; Restaurant</title>
+  <meta name="description" content="Discover our hospitality heritage, guest policies, and guest reviews at PUPSJ Hotel &amp; Restaurant.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/site.css">
+</head>
+<body>
+  <!-- Public Top Navigation -->
+  <header class="site-header">
+    <nav id="siteNav"></nav>
+  </header>
+
+  <!-- Page Header -->
+  <header class="site-section" style="background-color: var(--surface); border-bottom: 1px solid var(--line); padding: var(--s6) 0;">
+    <div class="site-container" style="text-align: center; max-width: 760px;">
+      <span class="site-section-tag">OUR STORY &amp; VALUES</span>
+      <h1>About PUPSJ Hotel &amp; Restaurant</h1>
+      <p style="margin-top: 12px;">
+        Dedicated to thoughtful Filipino hospitality, comfortable accommodations, and genuine care in San Juan City.
+      </p>
+    </div>
+  </header>
+
+  <main>
+    <!-- Story Section -->
+    <section class="site-section">
+      <div class="site-container" style="max-width: 800px;">
+        <span class="site-section-tag">HOSPITALITY COMMITMENT</span>
+        <h2>Where Every Stay and Every Meal Comes Together</h2>
+        <p style="font-size: 15px; line-height: 1.8; margin-top: 14px;">
+          PUPSJ Hotel &amp; Restaurant brings your room reservations, dining, and guest services into one effortless platform.
+          Book a room, reserve a dining table, and manage your stay from a single dashboard. With everything connected,
+          you spend less time coordinating logistics and more time enjoying comfortable accommodations and refined dining.
+        </p>
+        <p style="font-size: 15px; line-height: 1.8;">
+          Our location in San Juan City provides straightforward access to nearby commercial districts, medical centers,
+          and educational institutions, paired with secure on-site parking and 24-hour front desk assistance.
+        </p>
+      </div>
+    </section>
+
+    <!-- Real Data-Driven Stat Pillars -->
+    <section class="site-section" style="background-color: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+      <div class="site-container">
+        <div class="stats-grid" id="aboutStatsGrid">
+          <!-- Injected dynamically by about.js from real Data counts -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Policies & Good to Know -->
+    <section class="site-section" id="policies">
+      <div class="site-container" style="max-width: 800px;">
+        <div class="site-section-header">
+          <span class="site-section-tag">GUEST GUIDELINES</span>
+          <h2>Hotel Policies &amp; Good to Know</h2>
+          <p>Clear, transparent policies for reservations, payments, and property guidelines.</p>
+        </div>
+
+        <div class="card">
+          <ul id="aboutPoliciesList" style="list-style: none; display: flex; flex-direction: column; gap: 14px;">
+            <!-- Injected dynamically from CONFIG.policies -->
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Published Guest Reviews -->
+    <section class="site-section" style="background-color: var(--surface); border-top: 1px solid var(--line);">
+      <div class="site-container">
+        <div class="site-section-header">
+          <span class="site-section-tag">GUEST EXPERIENCES</span>
+          <h2>Verified Guest Reviews</h2>
+          <p>Feedback submitted by guests following their stay at PUPSJ Hotel &amp; Restaurant.</p>
+        </div>
+
+        <div class="grid-2" id="aboutReviewsGrid">
+          <!-- Injected dynamically by about.js from Data.getFeedback().filter(f => f.published) -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="siteFooter"></footer>
+
+  <script src="../../js/crypto.js"></script>
+  <script src="../../js/validate.js"></script>
+  <script src="../../js/core.js"></script>
+  <script src="../../js/data.js"></script>
+  <script src="../../js/services.js"></script>
+  <script src="../../js/site-shell.js"></script>
+  <script src="../../js/about.js"></script>
+</body>
+</html>

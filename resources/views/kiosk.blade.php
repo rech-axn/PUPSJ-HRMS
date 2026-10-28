@@ -1,0 +1,3 @@
+@extends('layout')
+@section('body')<main class="container section kiosk"><a class="staff-brand" href="{{ url('/') }}">PUPSJ Hotel</a><h1>Self Check-in</h1><p>Have your reservation and identification ready.</p><div id="kioskStage" class="card"><form id="kioskVerify" class="hrms-form"><label>Reservation code<input name="code" required autocomplete="off"></label><label>Verification code<input name="verification_code" required autocomplete="off"></label><button class="btn">Continue</button></form></div><div class="actions"><button class="btn-secondary" id="kioskClear">Cancel</button><span>Please ask the front desk if you need assistance.</span></div></main>@endsection
+

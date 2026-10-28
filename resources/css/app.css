@@ -1,0 +1,24 @@
+@import './site.css';
+@import './laravel.css';
+
+@import './property-media.css';
+
+@import './room-gallery.css';
+
+.menu-dish-photo{margin:0 0 16px}.menu-dish-photo img{display:block;width:100%;height:230px;object-fit:cover;border-radius:10px;background:var(--surface-2)}.menu-dish-photo figcaption{font-size:10px;line-height:1.5;color:var(--ink-3);margin-top:6px}.menu-dish-photo a{color:inherit;text-decoration:underline}@media(max-width:600px){.menu-dish-photo img{height:190px}}
+
+/* Keep menu photographs in a consistent frame without changing their generated color. */
+.menu-dish-photo{overflow:hidden;border-radius:10px 10px 0 0}
+.menu-dish-photo img{height:auto;aspect-ratio:4/3;object-fit:cover;object-position:center;filter:none;background:#eee7dc}
+/* Shared white introduction panel for Rooms, Restaurant, About and Contact. */
+.page-intro.site-section{height:340px;box-sizing:border-box;display:flex;align-items:center;text-align:center;padding:32px 0;background:var(--surface);border-bottom:1px solid var(--line)}
+.page-intro.site-section>.site-container{width:100%;max-width:860px;box-sizing:border-box;padding:0 24px}
+.page-intro.site-section h1{font-size:clamp(30px,3vw,40px);line-height:1.2;margin:12px 0}
+.page-intro.site-section p{max-width:760px;margin:0 auto 20px;line-height:1.7;color:var(--ink-2)}
+.page-intro.site-section p:last-child{margin-bottom:0}
+@media(max-width:640px){.page-intro.site-section{height:380px;padding:24px 0}.page-intro.site-section>.site-container{padding:0 20px}.page-intro.site-section h1{font-size:30px}}
+@media(max-width:350px){.page-intro.site-section{height:420px}.page-intro.site-section h1{font-size:28px}}
+
+@media(max-width:760px){.contact-page main .grid-2{grid-template-columns:minmax(0,1fr)!important}.contact-page main .grid-2>div{min-width:0;overflow-wrap:anywhere}}
+@media(max-width:350px){.site-header .site-nav-container{gap:8px;padding-left:12px;padding-right:12px}.site-header .site-brand{min-width:0;gap:6px}.site-header .site-brand-name{font-size:16px;line-height:1.2;white-space:normal}.site-header .site-auth-btn{flex-shrink:0}}
+@media(max-width:760px){#menuCategoryTabs{justify-content:flex-start!important;overflow-x:auto;max-width:100%;min-width:0}#menuCategoryTabs .tab-btn{flex:0 0 auto}}

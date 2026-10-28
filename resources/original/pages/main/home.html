@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PUPSJ Hotel &amp; Restaurant – San Juan City</title>
+  <meta name="description" content="Accommodations, dining reservations, and guest hospitality in San Juan City, Metro Manila.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/site.css">
+</head>
+<body>
+  <!-- Public Top Navigation -->
+  <header class="site-header">
+    <nav id="siteNav"></nav>
+  </header>
+
+  <!-- Hero Section with Booking Bar -->
+  <header class="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 style="font-size: 48px; margin-bottom: 24px;">PUPSJ Hotel &amp; Restaurant</h1>
+    </div>
+
+    <!-- Booking Bar Card -->
+    <form class="booking-bar" id="homeBookingBar" aria-label="Check suite availability">
+      <div class="field">
+        <label for="ci">CHECK-IN DATE</label>
+        <input type="date" id="ci" required>
+      </div>
+      <div class="field">
+        <label for="co">CHECK-OUT DATE</label>
+        <input type="date" id="co" required>
+      </div>
+      <div class="field">
+        <label for="gs">GUESTS</label>
+        <select id="gs">
+          <option value="1">1 Guest</option>
+          <option value="2" selected>2 Guests</option>
+          <option value="3">3 Guests</option>
+          <option value="4">4 Guests</option>
+          <option value="5">5 Guests</option>
+        </select>
+      </div>
+      <button class="btn btn-booking" type="submit" id="btnSearchAvailability">
+        Check Rates &amp; Availability &rsaquo;
+      </button>
+    </form>
+  </header>
+
+  <main>
+    <!-- Welcome & Heritage Story -->
+    <section class="site-section" style="background-color: var(--surface);">
+      <div class="site-container" style="text-align: center; max-width: 800px;">
+        <span class="site-section-tag">HOSPITALITY EXPERIENCE</span>
+        <h2>Where Every Stay and Every Meal Comes Together</h2>
+        <p style="font-size: 16px; line-height: 1.7; margin-top: 14px;">
+          PUPSJ Hotel &amp; Restaurant brings your room reservations, dining, and guest services into one unified platform.
+          Whether you are traveling for business, vacationing with family, or joining us for dinner, our team provides
+          attentive, straightforward service in the heart of San Juan City.
+        </p>
+      </div>
+    </section>
+
+    <!-- Featured Room Types Showcase -->
+    <section class="site-section">
+      <div class="site-container">
+        <div class="site-section-header">
+          <span class="site-section-tag">ACCOMMODATIONS</span>
+          <h2>Featured Rooms &amp; Suites</h2>
+          <p>Carefully appointed rooms designed for comfortable stays and restful nights.</p>
+        </div>
+
+        <div class="grid-2" id="homeRoomsGrid">
+          <!-- Injected dynamically by home.js -->
+        </div>
+
+        <div style="text-align: center; margin-top: 36px;">
+          <a class="btn-secondary" href="../rooms/rooms-deals.html#rooms">
+            View All Rooms &amp; Rates &rarr;
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dedicated Restaurant & Dining Feature -->
+    <section class="site-section" style="background-color: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+      <div class="site-container">
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center;" class="grid-2">
+          <div>
+            <span class="site-section-tag">RESTAURANT &amp; DINING</span>
+            <h2>PUPSJ Restaurant &amp; Lounge</h2>
+            <p style="font-size: 15px; line-height: 1.7; margin-top: 12px;">
+              Our kitchen serves a versatile menu ranging from hearty Filipino breakfast staples to steaks, pastas, and refreshing beverages.
+              Reserve a table ahead of time, browse our menus online, or arrange in-room dining connected directly to your guest folio.
+            </p>
+            <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
+              <a class="btn" href="../main/menu.html#reserve-table">Reserve a Table &rarr;</a>
+              <a class="btn-secondary" href="../main/menu.html">View Our Menu</a>
+            </div>
+          </div>
+
+          <div class="card" style="text-align: center; background-color: var(--surface-2);">
+            <span class="ic" data-icon="utensils" style="font-size: 20px; margin-bottom: 8px;">[ICON: utensils]</span>
+            <h3 style="margin-bottom: 6px;">Opening Hours</h3>
+            <p class="text-sm">Daily: 6:00 AM – 10:00 PM</p>
+            <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2); margin-top: 12px;">
+              <div><b>Breakfast:</b> 6:00 AM – 10:30 AM</div>
+              <div><b>Lunch:</b> 11:30 AM – 2:30 PM</div>
+              <div><b>Dinner:</b> 6:00 PM – 10:00 PM</div>
+            </div>
+            <div style="margin-top: 16px;">
+              <span class="pill pill--ok">Open Daily &middot; In-Room Dining Available</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Amenities Section -->
+    <section class="site-section" id="amenities">
+      <div class="site-container">
+        <div class="site-section-header">
+          <span class="site-section-tag">GUEST SERVICES</span>
+          <h2>Hotel Amenities &amp; Facilities</h2>
+          <p>Practical amenities and conveniences designed to support your stay.</p>
+        </div>
+
+        <div class="grid-3" id="homeAmenitiesGrid">
+          <!-- Injected dynamically from CONFIG.amenities -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Location & Embedded Google Map -->
+    <section class="site-section" style="background-color: var(--surface); border-top: 1px solid var(--line);">
+      <div class="site-container">
+        <div class="site-section-header">
+          <span class="site-section-tag">FINDING US</span>
+          <h2>Location &amp; Accessibility</h2>
+          <p>Situated in San Juan City with on-site parking and accessible transit links.</p>
+        </div>
+
+        <div style="border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); height: 360px; margin-bottom: 24px;">
+          <iframe title="Map of PUPSJ Hotel &amp; Restaurant" loading="lazy" referrerpolicy="no-referrer-when-downgrade" style="width: 100%; height: 100%; border: 0;" src="https://maps.google.com/maps?q=Polytechnic+University+of+the+Philippines+San+Juan&amp;output=embed"></iframe>
+        </div>
+
+        <div class="grid-3">
+          <div class="card card-sm">
+            <b>Address</b>
+            <p class="text-sm" style="margin-top: 4px;" id="homeAddressText"></p>
+          </div>
+          <div class="card card-sm">
+            <b>Parking &amp; Valet</b>
+            <p class="text-sm" style="margin-top: 4px;">Complimentary 24/7 on-site basement and valet parking for registered guests and restaurant patrons.</p>
+          </div>
+          <div class="card card-sm">
+            <b>Front Desk &amp; Concierge</b>
+            <p class="text-sm" style="margin-top: 4px;" id="homeContactText"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="siteFooter"></footer>
+
+  <script src="../../js/crypto.js"></script>
+  <script src="../../js/validate.js"></script>
+  <script src="../../js/core.js"></script>
+  <script src="../../js/data.js"></script>
+  <script src="../../js/services.js"></script>
+  <script src="../../js/site-shell.js"></script>
+  <script src="../../js/booking-modal.js"></script>
+  <script src="../../js/home.js"></script>
+</body>
+</html>

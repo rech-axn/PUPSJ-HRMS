@@ -1,0 +1,1 @@
+document.getElementById('resetForm').onsubmit=async e=>{e.preventDefault();try{await HRMS.api('/api/reset-password','POST',Object.fromEntries(new FormData(e.target)));location.href=HRMS.base+'/login';}catch(err){HRMS.error(err);}};

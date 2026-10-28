@@ -1,189 +1,112 @@
 # PUPSJ Hotel & Restaurant Management System
 
-An editorial, lightweight, fully-featured hospitality management platform (Public Guest Site, Guest Self-Service Portal, and Staff Operations System) engineered strictly in **plain HTML, Vanilla CSS, and modular Vanilla JavaScript using `localStorage`**. No external frameworks, no libraries, and zero build step required.
+Laravel 12 / PHP 8.2+, MySQL or MariaDB, and Vite. **The team database name is `pupsj_hrms`.** Use simulated guest information and test payments.
 
----
+## Requirements
 
-## 1. Project Directory Structure
+- PHP 8.2+ and Composer 2. On Windows, XAMPP PHP/MySQL can be used; put `C:\xampp\php` on PATH.
+- Node.js 22.12+ and npm. PHP needs PDO MySQL, mbstring, OpenSSL, fileinfo, and the extensions checked by Composer. PDO SQLite is also needed for the automated tests.
+- MySQL/MariaDB running. No database dump is required for a fresh installation: migrations and seeders create the application tables, rooms, menu, and approved training defaults.
+- Git. Run commands in the folder containing `artisan`, `composer.json` and `package.json`.
 
-```text
-SAD_UI/
-├── index.html                           # Root landing redirect -> pages/main/home.html
-├── ICONS.md                             # Catalogue of icon placeholders and SVG specifications
-├── README.md                            # System architecture, configuration, and credentials guide
-├── css/
-│   └── site.css                         # THE SINGLE unified stylesheet for the entire platform (~29.9 KB)
-├── js/
-│   ├── core.js                          # Shared utilities: CONFIG, Manila-safe today(), esc(), modal, toast, exportCSV()
-│   ├── data.js                          # Unified domain data layer, relative-date seeds, schema migrations, and audit logging
-│   ├── site-shell.js                    # Public site navigation header, footer, and interactive concierge bot
-│   ├── staff-shell.js                   # Staff operations shell: auth guard, responsive sidebar (<900px drawer), search, notifications
-│   ├── booking-modal.js                 # Shared booking dialog, room auto-assigner, folio ledger modal, and tax invoice
-│   ├── home.js                          # Public home page logic
-│   ├── about.js                         # Public about page & published guest reviews
-│   ├── contact.js                       # Public contact form submitting to staff inquiries
-│   ├── menu.js                          # Public dining menu catalog & table reservation booking
-│   ├── rooms-deals.js                   # Public live room rates, stay calculator, and active promos
-│   ├── login.js                         # Unified authentication, guest registration & exact lookup (legacy guest-login.js alias)
-│   ├── guest-portal.js                  # Guest self-service portal (stay folio, dining orders, housekeeping, loyalty, messaging)
-│   ├── dashboard.js                     # Staff operations dashboard, KPIs, month calendar, pending alerts
-│   ├── reservations.js                  # Staff reservations ledger (table, month/week/agenda calendar, check-in/out)
-│   ├── guests.js                        # Staff guest CRM directory (profiles, cards, table, walk-in check-in)
-│   ├── housekeeping.js                  # Staff housekeeping matrix, arrival priority, and guest requests queue
-│   ├── maintenance.js                   # Staff facility work orders, priority triage, and out-of-service room toggling
-│   ├── orders.js                        # Staff restaurant POS, dining/in-room tickets, and folio billing
-│   ├── tables.js                        # Restaurant floor plan grid, table status, and reservation seating
-│   ├── menu-mgmt.js                     # Staff menu catalog CRUD, 86 availability toggling, and categories
-│   ├── payments.js                      # Finance folios ledger, official receipts journal, and quick POS terminal
-│   ├── reports.js                       # Management KPIs (ADR, RevPAR, Occupancy %), SVG charts, and print-to-PDF
-│   ├── rooms.js                         # Room inventory management, status checks, and deletion protection
-│   ├── roomtypes.js                     # Room categories CRUD, capacity limits, descriptions, and amenities
-│   ├── promotions.js                    # Marketing discounts engine, qualifying criteria, and active toggles
-│   ├── messages.js                      # Staff messaging inbox, conversation threads, and live guest replies
-│   ├── inquiries.js                     # Public contact inquiries queue, mailto integration, and staff notes
-│   ├── feedback.js                      # Guest reviews moderation, ratings distribution, and website publishing
-│   ├── employees.js                     # Staff account administration and role labels
-│   └── audit.js                         # Immutable system audit trail and CSV export
-├── assets/
-│   └── images/
-│       └── homepage.webp                # Hero background image
-└── pages/
-    ├── main/
-    │   ├── home.html                    # Public home page
-    │   ├── about.html                   # Public about page
-    │   ├── contact.html                 # Public contact page
-    │   ├── menu.html                    # Public restaurant menu & table booking
-    │   ├── privacy.html                 # Privacy policy
-    │   └── terms.html                   # Terms & conditions
-    ├── rooms/
-    │   ├── rooms-deals.html             # Public room availability & promotions
-    │   ├── rooms.html                   # Staff room inventory
-    │   └── roomtypes.html               # Staff room categories
-    ├── auth/
-    │   ├── login.html                   # Unified sign-in, account creation & booking finder
-    │   └── guest-login.html             # Redirect shim to login.html
-    ├── guest/
-    │   ├── guest-portal.html            # In-house guest self-service portal
-    │   └── guests.html                  # Staff guest CRM
-    └── management/
-        ├── dashboard.html               # Staff executive dashboard
-        ├── reservations.html            # Staff reservations ledger & calendar
-        ├── housekeeping.html            # Staff housekeeping & room turnover
-        ├── maintenance.html             # Staff facility work orders
-        ├── orders.html                  # Staff restaurant POS & order billing
-        ├── tables.html                  # Floor plan & table seating
-        ├── menu.html                    # Staff menu catalog
-        ├── payments.html                # Finance folios & receipt ledger
-        ├── reports.html                 # Business performance & reports
-        ├── promotions.html              # Promotions & discount campaigns
-        ├── messages.html                # Guest communications inbox
-        ├── inquiries.html               # Public contact inquiries queue
-        ├── feedback.html                # Guest feedback & reviews moderation
-        ├── employees.html               # Staff administrator accounts
-        └── audit.html                   # System audit log & data reset
+## First installation
+
+```powershell
+git clone --branch development https://github.com/rech-axn/PUPSJ-HRMS.git
+cd PUPSJ-HRMS
+composer install
 ```
 
----
+Create your private environment file if Composer has not created it:
 
-## 2. Central Configuration (`js/core.js`)
-
-All hotel facts, addresses, policies, tax rates, contact channels, and rules are centralized in `CONFIG` inside `js/core.js`:
-
-```javascript
-window.CONFIG = {
-  hotelName: 'PUPSJ Hotel & Restaurant',
-  brandShort: 'PUPSJ Hotel',
-  locationCity: 'San Juan City, Metro Manila',
-  address: 'San Juan City, Metro Manila, Philippines',
-  phones: ['+63 (2) 8735-5555', '+63 917 123 4567'],
-  emails: {
-    reservations: 'reservations@pupsjhotel.ph',
-    concierge: 'concierge@pupsjhotel.ph',
-    billing: 'billing@pupsjhotel.ph'
-  },
-  hours: {
-    frontDesk: '24 Hours Daily',
-    checkIn: '2:00 PM',
-    checkOut: '12:00 PM',
-    restaurant: '6:00 AM – 10:00 PM'
-  },
-  wifi: {
-    network: 'PUPSJ-Guest-HighSpeed',
-    password: 'MabuhayStay2026'
-  },
-  taxRates: {
-    vatPct: 12,
-    serviceChargePct: 10
-  },
-  depositPct: 50,
-  freeCancelDays: 3,
-  loyalty: {
-    silverNights: 5,
-    goldNights: 12,
-    platinumNights: 25,
-    pointsPerNight: 100
-  },
-  legal: {
-    tin: '[PLACEHOLDER: TIN]',
-    permit: '[PLACEHOLDER: BIR PERMIT]'
-  },
-  demoLogins: true
-};
+```powershell
+Copy-Item .env.example .env
 ```
 
----
+Run that copy command only when `.env` is missing; keep an existing environment file. Set these values inside `.env` (use your own local database password):
 
-## 3. Demo Accounts & Default Credentials
-
-Demo accounts can be used to immediately access all features. On `pages/auth/login.html` (formerly `guest-login.html`), one-click demo login buttons are provided:
-
-### Staff Accounts (Staff Operations & Management)
-| Role / Label | Username | Password | Access Scope |
-|---|---|---|---|
-| **Admin** | `admin` | `admin123` | Full access to all staff modules |
-| **Manager** | `manager` | `manager123` | Full access to all staff modules |
-| **Front Desk** | `frontdesk` | `desk123` | Full access to all staff modules |
-| **Housekeeping** | `housekeeper` | `clean123` | Full access to all staff modules |
-| **Kitchen Chef** | `chef` | `cook123` | Full access to all staff modules |
-
-*Note: In accordance with project requirements, role is an organizational label; any authenticated staff member can access all staff pages.*
-
-### Guest Demo Account (Guest Portal)
-- **Email:** `maria.santos@email.com`
-- **Password:** `guest123`
-- **Linked Active Booking:** `HTL-2041` (In-house stay in Deluxe Ocean View Room 201)
-
-### Booking Quick Lookup
-- **Reservation Code:** `HTL-2041`
-- **Last Name:** `Santos` (or Phone: `0917-123-4567`)
-
----
-
-## 4. Resetting Demo Data
-
-To restore all data collections back to a fresh state with **dynamically relative dates** (anchored relative to Manila `today()`):
-1. Sign in as any staff member.
-2. Go to **Settings &rarr; Audit Log** (`pages/management/audit.html`).
-3. Click the red **"Reset Demo Data"** button at the top right.
-4. Confirm the prompt. All `pupsj.*` keys will be cleared and regenerated relative to today.
-
-Alternatively, open your browser developer console on any page and execute:
-```javascript
-Data.resetDemoData();
-location.reload();
+```dotenv
+APP_ENV=local
+APP_URL=http://127.0.0.1:8000
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=pupsj_hrms
+DB_USERNAME=root
+DB_PASSWORD=
+HRMS_ADMIN_EMAIL=admin@pupsj.edu.ph
+HRMS_ADMIN_PASSWORD=
 ```
 
----
+Start MySQL/MariaDB, then run:
 
-## 5. Security & Academic Disclaimer
+```powershell
+composer setup
+```
 
-> **IMPORTANT NOTICE:**  
-> This project is designed for academic demonstration and portfolio evaluation. All data, user accounts, and session tokens are persisted inside client-side browser `localStorage`.  
-> Passwords are intentionally stored in unencrypted format to permit standalone operation without external database or server dependencies.  
-> **This is NOT suitable for production environments.** A production deployment must implement:
-> - A secure server-side runtime (Node.js, Go, Python, etc.)
-> - Strict transport security over HTTPS
-> - Salted password hashing using `bcrypt` or `Argon2`
-> - Secure, HTTP-only, SameSite session cookies or JWT tokens
-> - Proper role-based access control (RBAC) enforced on server endpoints
-> - Payment processing via certified PCI-DSS compliant payment gateways (PayMongo, Stripe, Maya Checkout). All payments in this system are purely simulated.
+This installs PHP dependencies, creates `.env` only if missing, prepares writable directories, clears stale configuration, creates `pupsj_hrms` if missing, generates APP_KEY only if missing, runs pending migrations and seeders, installs the exact npm lockfile dependencies, and builds Vite assets. If a new administrator is needed, it asks for a local password (at least 10 characters). Alternatively set `HRMS_ADMIN_PASSWORD` privately in `.env` before running. Existing administrator passwords are not reset.
+
+The database user needs CREATE privilege only when creating the database. If it does not have that privilege, create an empty database named `pupsj_hrms` through phpMyAdmin, then rerun. No `migrate:fresh`, database drop, or application-key replacement is part of this workflow.
+
+## Run the application
+
+For normal development:
+
+```powershell
+composer dev
+```
+
+Open **http://127.0.0.1:8000**. This starts the Laravel server, queue listener, and Vite together. Keep the terminal running; use Ctrl+C to stop. The Vite address on port 5173 serves frontend assets, not the application. The shared dev command does not depend on Laravel Pail/PCNTL, which causes problems on Windows.
+
+For a demonstration using built assets:
+
+```powershell
+npm run build
+php artisan serve
+```
+
+Only MySQL and the Laravel server must remain running. Stop any Vite server first. Remove `public/hot` only if it is a stale marker from a stopped Vite process.
+
+### Optional XAMPP Apache setup
+
+Place the project at `C:\xampp\htdocs\PUPSJ-HRMS`, start Apache and MySQL, set `APP_URL=http://localhost/PUPSJ-HRMS/public`, and run `php artisan config:clear`. Open **http://localhost/PUPSJ-HRMS/public/** after building assets. Use `npm run dev` only for live frontend edits. You do not need `php artisan serve` when using Apache. A configured virtual host should point directly to the project's `public` folder.
+
+## After pulling changes
+
+Save or commit your own changes first. On the shared development branch:
+
+```powershell
+git pull --ff-only origin development
+composer install
+php artisan config:clear
+php artisan migrate
+npm ci
+npm run build
+```
+
+Read the PR for any explicit data-seeding step. Do not rerun all seeders automatically for every pull: although accounts are retained, the menu seeder refreshes seeded descriptions and photo metadata. For an intentional refresh, use `php artisan db:seed`. Team data is not synchronized by Git; an existing database transfer requires a separate authorized SQL export/import.
+
+## Verify your installation
+
+```powershell
+composer check-platform-reqs
+php artisan migrate:status
+composer test
+npm run build
+```
+
+Tests force an isolated SQLite in-memory database using `tests/bootstrap.php`; they do not use `pupsj_hrms`. Some retired kiosk/loyalty tests are intentionally skipped. Never run `migrate:fresh` against a developer's working database.
+
+## Accounts and optional services
+
+- Fresh setup creates an administrator using `HRMS_ADMIN_EMAIL` and your chosen password. Create other users through the administrator workspace. Credentials from another developer's private files are not required.
+- Confirmation emails use `MAIL_MAILER=log` locally. Check `storage/logs/laravel.log`; configure SMTP separately for actual email delivery.
+- PayMongo accepts **test keys only**. Leave its keys blank if you are not testing payments; see [the setup guide](docs/PAYMONGO_SETUP.md). Payment provider configuration is not required just to start the application.
+- Hotel and Restaurant business dates close separately. Existing older open dates must be reconciled by authorized staff; installation does not close accounting dates automatically.
+- The chatbot model is included. `php artisan chatbot:evaluate` runs the authored evaluation without retraining. See [the evaluation report](docs/CHATBOT_EVALUATION.md).
+
+## Files to edit and commit
+
+Canonical frontend source is in `resources/js`, `resources/css`, and `resources/assets`. Preserve the original theme and use Vite entry points. The old static folders remain for compatibility; do not edit them instead of the active source.
+
+Commit `composer.lock`, `package-lock.json`, source, migrations, seed data and documentation. Do not commit `.env`, credentials, SQL dumps, `vendor`, `node_modules`, `public/build`, `public/hot`, runtime logs or cached configuration. `.env.example` contains placeholders only.

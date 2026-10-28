@@ -3,3 +3,6 @@
 
 .rooms-showcase-intro>.site-container,.rooms-showcase-offers>.site-container{padding-top:0;padding-bottom:0}.rooms-showcase-list{padding-top:0}
 
+/* Details expand below the summary and take no space while collapsed. */
+.room-showcase{align-items:start}
+.room-showcase-copy,.room-showcase-summary{min-width:0}

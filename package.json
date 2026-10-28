@@ -17,5 +17,8 @@
     "dependencies": {
         "@tesseract.js-data/eng": "^1.0.0",
         "tesseract.js": "^7.0.0"
+    },
+    "engines": {
+        "node": ">=22.12.0"
     }
 }

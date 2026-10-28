@@ -11,11 +11,11 @@
  <div class="room-showcase-media" data-showcase-gallery="{{ $type['id'] }}">
  @if($type['photo'])<img src="{{ $type['photo'] }}" alt="{{ $type['n'] }}" loading="lazy">@else<div class="room-showcase-no-photo">Room photos coming soon</div>@endif
  </div>
- <div class="room-showcase-copy"><span class="site-section-tag">YOUR ROOM, YOUR RETREAT</span><h2>{{ $type['n'] }}</h2><p class="room-showcase-description">{{ $type['desc'] ?: 'A comfortable room for a relaxing stay, with thoughtful everyday amenities.' }}</p>
+ <div class="room-showcase-copy"><div class="room-showcase-summary"><span class="site-section-tag">YOUR ROOM, YOUR RETREAT</span><h2>{{ $type['n'] }}</h2><p class="room-showcase-description">{{ $type['desc'] ?: 'A comfortable room for a relaxing stay, with thoughtful everyday amenities.' }}</p>
  <ul class="room-showcase-highlights"><li>Up to {{ (int)$type['g'] + (int)($type['extra_capacity'] ?? 0) }} guests</li>@if($type['bed_size'])<li>{{ $type['bed_size'] }}</li>@endif<li>Wi-Fi, air conditioning and a private bathroom</li></ul>
  <p class="room-showcase-rate">From&nbsp;<strong>₱{{ number_format($type['r'],2) }}</strong><span> / night</span></p>
  <div class="room-showcase-actions"><a class="btn" data-showcase-book href="{{ url('/booking').'?'.http_build_query(['type'=>$type['n']]) }}">Book Now</a><button class="btn-secondary" type="button" data-showcase-details="details-{{ $type['id'] }}" aria-controls="details-{{ $type['id'] }}" aria-expanded="false">View More</button></div>
- <div class="room-showcase-details" id="details-{{ $type['id'] }}" hidden><h3>Room amenities</h3><ul>@foreach($type['amenities'] ?? [] as $amenity)<li>{{ $amenity }}</li>@endforeach</ul>
+ </div><div class="room-showcase-details" id="details-{{ $type['id'] }}" aria-label="{{ $type['n'] }} details" aria-hidden="true" hidden inert><h3>Room amenities</h3><ul>@foreach($type['amenities'] ?? [] as $amenity)<li>{{ $amenity }}</li>@endforeach</ul>
  @if($type['accessible_room'])<p>Accessible rooms available on request (floors 1–2).</p>@endif @if($type['accessible_bathroom'])<p>Designated rooms include accessible bathrooms; availability is checked when booking.</p>@endif
  @if($type['extra_capacity'])<p>Includes {{ $type['g'] }} guests. Up to {{ $type['extra_capacity'] }} additional guest at ₱{{ number_format($type['extra_person_rate'],2) }} per night.</p>@endif
  <p>Choose room-only or include-breakfast (buffet) options when booking. Buffet: ₱{{ number_format($originalBootstrap["data"]["policy"]["breakfast_buffet_rate"],2) }} per person/night. Plated in-room meals are ordered and charged separately. Final prices and availability depend on your dates and guest count. Special requests are subject to availability.</p></div>

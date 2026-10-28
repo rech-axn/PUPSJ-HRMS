@@ -1,54 +1,112 @@
 # PUPSJ Hotel & Restaurant Management System
 
-Laravel 12 and MariaDB/MySQL training application with Guest, Hotel Staff, Restaurant Staff and Administrator workspaces. Blade screens use server sessions, authorization and shared database records. The localStorage prototype is archived outside the served application.
+Laravel 12 / PHP 8.2+, MySQL or MariaDB, and Vite. **The team database name is `pupsj_hrms`.** Use simulated guest information and test payments.
 
-## Open locally
+## Requirements
 
-Run Apache and MySQL in XAMPP, then open http://localhost/PUPSJ-HRMS/public/ . The application root redirects to public. In another environment configure the web document root to the public directory.
+- PHP 8.2+ and Composer 2. On Windows, XAMPP PHP/MySQL can be used; put `C:\xampp\php` on PATH.
+- Node.js 22.12+ and npm. PHP needs PDO MySQL, mbstring, OpenSSL, fileinfo, and the extensions checked by Composer. PDO SQLite is also needed for the automated tests.
+- MySQL/MariaDB running. No database dump is required for a fresh installation: migrations and seeders create the application tables, rooms, menu, and approved training defaults.
+- Git. Run commands in the folder containing `artisan`, `composer.json` and `package.json`.
 
-Local administrator credentials remain in the workspace private `outputs/PUPSJ-HRMS local access.txt`. Fictional training-account credentials are in `outputs/PUPSJ-HRMS training accounts.txt`. These files are not deployed or committed.
-
-## Features and configuration
-
-See `docs/RECOMMENDATIONS_UPDATE.md` for implemented recommendations and remaining policy decisions. Set room capacities, extra-person fees, bed sizes, photos and accessibility in Room Types. Configure breakfast, deposits, promotions, approved training discounts, local tax, parking and reminders in Rates and Policies. Actual property values must be supplied; unconfirmed monetary policy values default to zero.
-
-Book room types; Hotel Staff assign physical rooms at check-in. Restaurant POS is restricted to Restaurant Staff and Administrators. Statements include acknowledgment fields, while cash, deposits, group allocations and transfers retain audit history. Hotel and Restaurant business dates are reconciled and closed separately.
-
-## PayMongo and email
-
-Only PayMongo test keys are accepted. Set `PAYMONGO_SECRET_KEY` and `PAYMONGO_WEBHOOK_SECRET` in `.env`, run `php artisan config:clear`, and register a reachable HTTPS `/webhooks/paymongo` endpoint for checkout paid events. QR Ph and card options need account support. Signed callbacks, not redirects, update payment records. Account-level test transactions have not been run without credentials.
-
-Email uses Laravel's local log by default. Configure SMTP for delivered confirmation letters. Confirmation records show Pending, Logged, Sent or Failed status. No real guest identities or live payment data are required for training.
-
-## Local machine-learning chatbot
-
-The chatbot is a trained multinomial Naive Bayes intent classifier with approved answer templates. Run `php artisan chatbot:train` after updating training examples. The small authored evaluation set is for development, not an independent research result. Unknown questions refer users to staff requests.
-
-## Setup and verification
-
-PHP 8.2+, Composer and MariaDB/MySQL are required. Run `composer install`, copy `.env.example` to `.env`, set database credentials, run `php artisan key:generate`, then `php artisan migrate --seed`. Set HRMS_ADMIN_EMAIL and HRMS_ADMIN_PASSWORD before the first seed. Existing users are preserved. Node.js (22.12 or newer) and npm build the frontend with Vite. After installing PHP dependencies, run `npm ci` and `npm run build`. Blade loads the compiled assets using `@vite`.
-
-Run `php artisan test` for the isolated SQLite in-memory regression suite. Legacy kiosk/OCR and points tests are skipped because those routes and loyalty rules are retired in the revised active scope. Never use `migrate:fresh` on the working database.
-
-Back up code and SQL before upgrades. Do not import client-side passwords or browser transaction records as trusted server data. Training statements are not certified tax invoices.
-
-
-## Frontend development with Vite
-
-Canonical frontend source is in `resources/js`, `resources/css` and `resources/assets`. Edit those files, not the old static copies under `public/js` or `public/css`. Page scripts are loaded as modules and staff code shares one module scope.
-
-For live development, start Apache and MySQL in XAMPP, open the normal local application URL, and run these commands in the project folder:
+## First installation
 
 ```powershell
-npm run dev
+git clone --branch development https://github.com/rech-axn/PUPSJ-HRMS.git
+cd PUPSJ-HRMS
+composer install
 ```
 
-Alternatively run `php artisan serve` in a separate terminal and use its URL while MySQL remains running. Vite provides frontend updates; Laravel/Apache serves the application and APIs. The Vite URL on port 5173 is not the hotel application URL.
+Create your private environment file if Composer has not created it:
 
-For a mock defense or normal XAMPP use:
+```powershell
+Copy-Item .env.example .env
+```
+
+Run that copy command only when `.env` is missing; keep an existing environment file. Set these values inside `.env` (use your own local database password):
+
+```dotenv
+APP_ENV=local
+APP_URL=http://127.0.0.1:8000
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=pupsj_hrms
+DB_USERNAME=root
+DB_PASSWORD=
+HRMS_ADMIN_EMAIL=admin@pupsj.edu.ph
+HRMS_ADMIN_PASSWORD=
+```
+
+Start MySQL/MariaDB, then run:
+
+```powershell
+composer setup
+```
+
+This installs PHP dependencies, creates `.env` only if missing, prepares writable directories, clears stale configuration, creates `pupsj_hrms` if missing, generates APP_KEY only if missing, runs pending migrations and seeders, installs the exact npm lockfile dependencies, and builds Vite assets. If a new administrator is needed, it asks for a local password (at least 10 characters). Alternatively set `HRMS_ADMIN_PASSWORD` privately in `.env` before running. Existing administrator passwords are not reset.
+
+The database user needs CREATE privilege only when creating the database. If it does not have that privilege, create an empty database named `pupsj_hrms` through phpMyAdmin, then rerun. No `migrate:fresh`, database drop, or application-key replacement is part of this workflow.
+
+## Run the application
+
+For normal development:
+
+```powershell
+composer dev
+```
+
+Open **http://127.0.0.1:8000**. This starts the Laravel server, queue listener, and Vite together. Keep the terminal running; use Ctrl+C to stop. The Vite address on port 5173 serves frontend assets, not the application. The shared dev command does not depend on Laravel Pail/PCNTL, which causes problems on Windows.
+
+For a demonstration using built assets:
 
 ```powershell
 npm run build
+php artisan serve
 ```
 
-Stop the Vite development server. The application then uses `public/build/manifest.json` and the hashed assets, without requiring Node to stay running. If an interrupted development session leaves `public/hot` pointing to a stopped local Vite server, remove that stale marker after confirming the dev server is stopped.
+Only MySQL and the Laravel server must remain running. Stop any Vite server first. Remove `public/hot` only if it is a stale marker from a stopped Vite process.
+
+### Optional XAMPP Apache setup
+
+Place the project at `C:\xampp\htdocs\PUPSJ-HRMS`, start Apache and MySQL, set `APP_URL=http://localhost/PUPSJ-HRMS/public`, and run `php artisan config:clear`. Open **http://localhost/PUPSJ-HRMS/public/** after building assets. Use `npm run dev` only for live frontend edits. You do not need `php artisan serve` when using Apache. A configured virtual host should point directly to the project's `public` folder.
+
+## After pulling changes
+
+Save or commit your own changes first. On the shared development branch:
+
+```powershell
+git pull --ff-only origin development
+composer install
+php artisan config:clear
+php artisan migrate
+npm ci
+npm run build
+```
+
+Read the PR for any explicit data-seeding step. Do not rerun all seeders automatically for every pull: although accounts are retained, the menu seeder refreshes seeded descriptions and photo metadata. For an intentional refresh, use `php artisan db:seed`. Team data is not synchronized by Git; an existing database transfer requires a separate authorized SQL export/import.
+
+## Verify your installation
+
+```powershell
+composer check-platform-reqs
+php artisan migrate:status
+composer test
+npm run build
+```
+
+Tests force an isolated SQLite in-memory database using `tests/bootstrap.php`; they do not use `pupsj_hrms`. Some retired kiosk/loyalty tests are intentionally skipped. Never run `migrate:fresh` against a developer's working database.
+
+## Accounts and optional services
+
+- Fresh setup creates an administrator using `HRMS_ADMIN_EMAIL` and your chosen password. Create other users through the administrator workspace. Credentials from another developer's private files are not required.
+- Confirmation emails use `MAIL_MAILER=log` locally. Check `storage/logs/laravel.log`; configure SMTP separately for actual email delivery.
+- PayMongo accepts **test keys only**. Leave its keys blank if you are not testing payments; see [the setup guide](docs/PAYMONGO_SETUP.md). Payment provider configuration is not required just to start the application.
+- Hotel and Restaurant business dates close separately. Existing older open dates must be reconciled by authorized staff; installation does not close accounting dates automatically.
+- The chatbot model is included. `php artisan chatbot:evaluate` runs the authored evaluation without retraining. See [the evaluation report](docs/CHATBOT_EVALUATION.md).
+
+## Files to edit and commit
+
+Canonical frontend source is in `resources/js`, `resources/css`, and `resources/assets`. Preserve the original theme and use Vite entry points. The old static folders remain for compatibility; do not edit them instead of the active source.
+
+Commit `composer.lock`, `package-lock.json`, source, migrations, seed data and documentation. Do not commit `.env`, credentials, SQL dumps, `vendor`, `node_modules`, `public/build`, `public/hot`, runtime logs or cached configuration. `.env.example` contains placeholders only.
